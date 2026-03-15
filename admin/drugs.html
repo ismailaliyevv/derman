@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dərmanlar — AzDərman Admin</title>
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-dot"></div><div class="logo-text">AzDərman</div><div class="logo-badge">ADMIN</div></div>
+  <div class="s-section">Əsas</div>
+  <a href="dashboard.html" class="s-link"><span class="s-icon">📊</span>Dashboard</a>
+  <a href="drugs.html"     class="s-link active"><span class="s-icon">💊</span>Dərmanlar</a>
+  <a href="categories.html" class="s-link"><span class="s-icon">📂</span>Kateqoriyalar</a>
+  <div class="s-section">İstifadəçilər</div>
+  <a href="admins.html"   class="s-link"><span class="s-icon">👤</span>Admin İstifadəçilər</a>
+  <a href="logs.html"     class="s-link"><span class="s-icon">📋</span>Fəaliyyət Jurnalı</a>
+  <div class="s-section">AI & İnteqrasiya</div>
+  <a href="ai-settings.html" class="s-link"><span class="s-icon">🤖</span>AI Parametrləri</a>
+  <a href="api-keys.html"    class="s-link"><span class="s-icon">🔑</span>API Açarları</a>
+  <div class="s-section">Analitika</div>
+  <a href="analytics.html"  class="s-link"><span class="s-icon">📈</span>Statistika</a>
+  <a href="prices.html"     class="s-link"><span class="s-icon">💰</span>Qiymət Analizi</a>
+  <div class="s-section">Sistem</div>
+  <a href="settings.html"   class="s-link"><span class="s-icon">⚙️</span>Sayt Parametrləri</a>
+  <a href="../index.html"   class="s-link" target="_blank"><span class="s-icon">🌐</span>Sayta Bax</a>
+  <div class="sidebar-user">
+    <div class="u-avatar" id="adminAvatar">A</div>
+    <div class="u-info"><div class="u-name" id="adminName">Admin</div><div class="u-email" id="adminEmail"></div></div>
+    <button class="btn-logout" onclick="adminLogout()">🚪</button>
+  </div>
+</aside>
+
+<div class="main-wrap">
+  <div class="topbar">
+    <div class="tb-left">
+      <div>
+        <div class="page-title">💊 Dərmanlar</div>
+        <div class="page-sub" id="subTitle">Yüklənir...</div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇️ CSV Export</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- FILTER BAR -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-body" style="padding:12px 16px">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+          <div>
+            <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Axtarış</div>
+            <div class="search-wrap">
+              <span class="search-icon">⌕</span>
+              <input class="search-in" id="drugSearch" type="text" placeholder="Ad, INN, istehsalçı..." oninput="onFilter()">
+            </div>
+          </div>
+          <div>
+            <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Kateqoriya</div>
+            <select class="fi" id="filterCat" onchange="onFilter()" style="padding:8px 10px;font-size:.82rem">
+              <option value="">Hamısı</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Forma</div>
+            <select class="fi" id="filterForm" onchange="onFilter()" style="padding:8px 10px;font-size:.82rem">
+              <option value="">Hamısı</option>
+              <option>Tablet</option>
+              <option>Kapsul</option>
+              <option>İnyeksiya üçün məhlul</option>
+              <option>İnfuziya üçün məhlul</option>
+              <option>Damcı</option>
+              <option>Krem</option>
+              <option>Gel</option>
+              <option>Məlhəm</option>
+              <option>Şərbət</option>
+              <option>Sprey</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Ölkə</div>
+            <select class="fi" id="filterCountry" onchange="onFilter()" style="padding:8px 10px;font-size:.82rem">
+              <option value="">Hamısı</option>
+              <option>Türkiyə</option><option>Almaniya</option><option>Rusiya</option>
+              <option>Hindistan</option><option>Ukrayna</option><option>İtaliya</option>
+              <option>Macarıstan</option><option>Sloveniya</option><option>İspaniya</option>
+              <option>Fransa</option><option>Belarus</option><option>Polşa</option>
+              <option>Avstriya</option><option>Azərbaycan</option><option>Çin</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Sırala</div>
+            <select class="fi" id="drugSort" onchange="onFilter()" style="padding:8px 10px;font-size:.82rem">
+              <option value="name_asc">Ad A→Z</option>
+              <option value="name_desc">Ad Z→A</option>
+              <option value="price_asc">Qiymət ↑</option>
+              <option value="price_desc">Qiymət ↓</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">&nbsp;</div>
+            <button class="btn btn-secondary" onclick="clearFilters()" style="padding:8px 14px;font-size:.8rem">✕ Sıfırla</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title" id="tableTitle">Bütün dərmanlar</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="resultCount" style="font-size:.78rem;font-weight:700;color:var(--muted)"></span>
+          <select class="fi" id="perPageSel" onchange="onFilter()" style="padding:5px 9px;font-size:.76rem;width:auto">
+            <option value="50">50/səh</option>
+            <option value="100">100/səh</option>
+            <option value="200">200/səh</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Ticarət Adı</th>
+              <th>INN</th>
+              <th>Doza</th>
+              <th>Forma</th>
+              <th>Qablaşdırma</th>
+              <th>Kateqoriya</th>
+              <th>Ölkə / İstehsalçı</th>
+              <th>Topdansatış</th>
+              <th>Pərakəndə</th>
+              <th>Tarix</th>
+            </tr>
+          </thead>
+          <tbody id="drugsTb">
+            <tr><td colspan="11"><div class="page-loading"><span class="spin-dark" style="width:28px;height:28px;border-width:3px;display:block;"></span><p>13,773 dərman yüklənir...</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" id="drugPag"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DRUG DETAIL MODAL -->
+<div class="modal-overlay" id="drugModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-head">
+      <div class="modal-title" id="dModalTitle">Dərman Məlumatı</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="dModalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+// Load drugs data from parent index.html's embedded data via fetch
+// Since we can't import 2.3MB directly, we load it dynamically
+const CATS=[
+  {n:"Ağrı kəsicilər",i:"💊",c:"#e53e3e"},{n:"Antibiotiklər",i:"🦠",c:"#2b6cb0"},
+  {n:"Ürək-damar",i:"❤️",c:"#c0392b"},{n:"Mədə-bağırsaq",i:"🫁",c:"#2d6a4f"},
+  {n:"Tənəffüs yolları",i:"🫀",c:"#6b46c1"},{n:"Sinir sistemi",i:"🧠",c:"#744210"},
+  {n:"Endokrinologiya",i:"⚗️",c:"#b7791f"},{n:"Antifungal/Antiparazit",i:"🔬",c:"#276749"},
+  {n:"Vitamin/Mineral",i:"🌿",c:"#2f855a"},{n:"Göz dərmanları",i:"👁️",c:"#2c5282"},
+  {n:"Allerji/İmmun",i:"🌸",c:"#97266d"},{n:"Onkologiya",i:"⚕️",c:"#742a2a"},
+  {n:"Dəri dərmanları",i:"🧴",c:"#c05621"},{n:"Sidik yolları",i:"🫘",c:"#2c7a7b"},
+  {n:"Vaccine/Biologic",i:"💉",c:"#553c9a"},{n:"Əzələ/Oynaq",i:"🦴",c:"#6b46c1"},
+  {n:"Digər",i:"📦",c:"#718096"}
+];
+const FORM_ICONS={'Tablet':'💊','Kapsul':'💊','İnyeksiya üçün məhlul':'💉','İnfuziya üçün məhlul':'🩺','Damcı':'💧','Məhlul':'🧪','Şərbət':'🍶','Krem':'🧴','Gel':'🧴','Məlhəm':'🧴','Sprey':'💨'};
+function fi(f){for(const k in FORM_ICONS)if(f&&f.startsWith(k))return FORM_ICONS[k];return '💊';}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+let RAW=[], filtered=[], curPage=1, PER_PAGE=50;
+
+// Populate cat filter
+document.getElementById('filterCat').innerHTML='<option value="">Hamısı</option>'+CATS.map((c,i)=>`<option value="${i}">${c.i} ${c.n}</option>`).join('');
+
+// Load drugs from index.html (same origin)
+async function loadDrugsData(){
+  try {
+    document.getElementById('subTitle').textContent = 'Məlumatlar yüklənir...';
+    const resp = await fetch('../index.html');
+    const text = await resp.text();
+    const m = text.match(/const RAW=(\[[\s\S]*?\]);[\s\S]*?const CATS/);
+    if(!m) throw new Error('Məlumat tapılmadı');
+    RAW = JSON.parse(m[1]);
+    document.getElementById('subTitle').textContent = `${RAW.length.toLocaleString()} preparat reyestrdə`;
+    onFilter();
+  } catch(e) {
+    document.getElementById('drugsTb').innerHTML = `<tr><td colspan="11"><div class="empty" style="padding:40px"><div class="empty-icon">⚠️</div><div class="empty-text">Məlumat yüklənmədi: ${e.message}<br><small>index.html ilə eyni qovluqda olduğunuzu yoxlayın</small></div></div></td></tr>`;
+    document.getElementById('subTitle').textContent = 'Yükləmə xətası';
+  }
+}
+
+function onFilter(){
+  const q = document.getElementById('drugSearch').value.toLowerCase().trim();
+  const cat = document.getElementById('filterCat').value;
+  const form = document.getElementById('filterForm').value;
+  const country = document.getElementById('filterCountry').value;
+  const sort = document.getElementById('drugSort').value;
+  PER_PAGE = parseInt(document.getElementById('perPageSel').value)||50;
+
+  filtered = RAW.filter(d=>{
+    if(cat!=='' && d[11]!==parseInt(cat)) return false;
+    if(form && d[3]!==form) return false;
+    if(country && d[7]!==country) return false;
+    if(q){const t=(d[0]+' '+d[1]+' '+d[6]).toLowerCase();if(!t.includes(q))return false;}
+    return true;
+  });
+
+  filtered.sort((a,b)=>{
+    switch(sort){
+      case 'name_asc': return a[0].localeCompare(b[0],'az');
+      case 'name_desc': return b[0].localeCompare(a[0],'az');
+      case 'price_asc': return (parseFloat(a[9])||0)-(parseFloat(b[9])||0);
+      case 'price_desc': return (parseFloat(b[9])||0)-(parseFloat(a[9])||0);
+      default: return 0;
+    }
+  });
+
+  curPage=1;
+  renderTable();
+}
+
+function clearFilters(){
+  document.getElementById('drugSearch').value='';
+  document.getElementById('filterCat').value='';
+  document.getElementById('filterForm').value='';
+  document.getElementById('filterCountry').value='';
+  document.getElementById('drugSort').value='name_asc';
+  onFilter();
+}
+
+function renderTable(){
+  const total=filtered.length, pages=Math.ceil(total/PER_PAGE);
+  if(curPage>pages&&pages>0) curPage=1;
+  const start=(curPage-1)*PER_PAGE, page=filtered.slice(start,start+PER_PAGE);
+
+  document.getElementById('resultCount').textContent = `${total.toLocaleString()} nəticə`;
+  document.getElementById('tableTitle').textContent = `${total===RAW.length?'Bütün dərmanlar':`${total.toLocaleString()} nəticə`}`;
+
+  if(!page.length){
+    document.getElementById('drugsTb').innerHTML='<tr><td colspan="11"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nəticə tapılmadı</div></div></td></tr>';
+    document.getElementById('drugPag').innerHTML='';
+    return;
+  }
+
+  document.getElementById('drugsTb').innerHTML = page.map((d,i)=>{
+    const idx=start+i;
+    const ret=parseFloat(d[9])||0, ws=parseFloat(d[8])||0;
+    const pc=ret<10?'var(--green)':ret<50?'var(--accent)':ret<200?'var(--gold)':'var(--red)';
+    const cat=CATS[d[11]||16]||CATS[16];
+    const maker=d[6].length>30?d[6].substring(0,30)+'…':d[6];
+    return`<tr style="cursor:pointer" onclick="showDetail(${idx})">
+      <td style="color:var(--muted);font-size:.72rem">${start+i+1}</td>
+      <td class="fw" style="max-width:200px">${esc(d[0])}</td>
+      <td style="font-size:.74rem;color:var(--muted);font-style:italic;max-width:160px">${esc(d[1])||'—'}</td>
+      <td style="font-size:.75rem;white-space:nowrap">${esc(d[2])||'—'}</td>
+      <td><span style="display:inline-block;font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--accent3);color:var(--accent);border:1px solid var(--accent4);white-space:nowrap">${fi(d[3])} ${esc(d[3])}</span></td>
+      <td style="font-size:.73rem;color:var(--muted);white-space:nowrap">${esc(d[4])} №${esc(d[5])}</td>
+      <td><span style="display:inline-block;font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:5px;border:1px solid ${cat.c}30;background:${cat.c}10;color:${cat.c};white-space:nowrap">${cat.i} ${esc(cat.n.length>12?cat.n.substring(0,11)+'…':cat.n)}</span></td>
+      <td style="font-size:.74rem"><span style="font-weight:700">${esc(d[7])}</span><br><span style="color:var(--muted);font-size:.68rem">${maker}</span></td>
+      <td style="font-size:.78rem;color:var(--muted);white-space:nowrap">${ws?ws.toFixed(2)+' ₼':'—'}</td>
+      <td style="font-weight:800;color:${pc};white-space:nowrap">${ret?ret.toFixed(2)+' ₼':'—'}</td>
+      <td style="font-size:.71rem;color:var(--muted);white-space:nowrap">${esc(d[10])||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  renderPag(pages);
+}
+
+function renderPag(pages){
+  const pag=document.getElementById('drugPag');
+  if(pages<=1){pag.innerHTML='';return;}
+  let b=`<button class="page-btn" ${curPage===1?'disabled':''} onclick="goPage(${curPage-1})">◀</button>`;
+  const range=[];
+  if(pages<=7){for(let i=1;i<=pages;i++)range.push(i);}
+  else{range.push(1);if(curPage>4)range.push('…');for(let i=Math.max(2,curPage-2);i<=Math.min(pages-1,curPage+2);i++)range.push(i);if(curPage<pages-3)range.push('…');range.push(pages);}
+  range.forEach(p=>{if(p==='…')b+=`<span class="page-info">…</span>`;else b+=`<button class="page-btn ${p===curPage?'active':''}" onclick="goPage(${p})">${p}</button>`;});
+  b+=`<button class="page-btn" ${curPage===pages?'disabled':''} onclick="goPage(${curPage+1})">▶</button>`;
+  b+=`<span class="page-info" style="margin-left:8px">${curPage} / ${pages}</span>`;
+  pag.innerHTML=b;
+}
+function goPage(p){curPage=p;renderTable();document.querySelector('.table-wrap').scrollIntoView({behavior:'smooth',block:'start'});}
+
+function showDetail(idx){
+  const d=filtered[idx]; if(!d) return;
+  const cat=CATS[d[11]||16]||CATS[16];
+  const ret=parseFloat(d[9])||0, ws=parseFloat(d[8])||0;
+  document.getElementById('dModalTitle').textContent=d[0];
+  document.getElementById('dModalBody').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Ticarət adı</div><div style="font-weight:700;font-size:.88rem">${esc(d[0])}</div></div>
+      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">INN (Beynəlxalq ad)</div><div style="font-size:.85rem;color:var(--accent);font-style:italic">${esc(d[1])||'—'}</div></div>
+      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Doza</div><div style="font-size:.85rem;font-weight:600">${esc(d[2])||'—'}</div></div>
+      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Farmasevtik forma</div><div style="font-size:.85rem;font-weight:600">${fi(d[3])} ${esc(d[3])||'—'}</div></div>
+      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Qablaşdırma</div><div style="font-size:.85rem;font-weight:600">${esc(d[4])} — №${esc(d[5])}</div></div>
+      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Kateqoriya</div><div style="font-size:.85rem;font-weight:700;color:${cat.c}">${cat.i} ${esc(cat.n)}</div></div>
+      <div style="grid-column:1/-1;background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">İstehsalçı</div><div style="font-size:.84rem;font-weight:600">${esc(d[6])} <span style="color:var(--muted);font-weight:500">(${esc(d[7])})</span></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+      <div style="background:var(--accent3);border:1.5px solid var(--accent4);border-radius:9px;padding:13px;text-align:center">
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:4px">Topdansatış</div>
+        <div style="font-size:1.2rem;font-weight:800;color:var(--muted)">${ws?ws.toFixed(2)+' ₼':'—'}</div>
+      </div>
+      <div style="background:var(--green2);border:1.5px solid var(--green3);border-radius:9px;padding:13px;text-align:center">
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:4px">Pərakəndə (ƏDV ilə)</div>
+        <div style="font-size:1.3rem;font-weight:900;color:var(--green)">${ret?ret.toFixed(2)+' ₼':'—'}</div>
+      </div>
+      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:13px;text-align:center">
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Qüvvəyə minmə</div>
+        <div style="font-size:.88rem;font-weight:700;color:var(--ink2)">${esc(d[10])||'—'}</div>
+      </div>
+    </div>`;
+  document.getElementById('drugModal').classList.add('open');
+}
+function closeModal(){document.getElementById('drugModal').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+function exportCSV(){
+  if(!filtered.length){toast('Export üçün məlumat yoxdur','err');return;}
+  const headers=['Ticarət Adı','INN','Doza','Forma','Qablaşdırma','Say','İstehsalçı','Ölkə','Topdansatış','Pərakəndə','Tarix','Kateqoriya'];
+  const rows=[headers.join(',')];
+  filtered.forEach(d=>{
+    const cat=CATS[d[11]||16]?.n||'Digər';
+    rows.push([d[0],d[1],d[2],d[3],d[4],d[5],d[6],d[7],d[8],d[9],d[10],cat].map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(','));
+  });
+  const blob=new Blob(['\ufeff'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='azderman_export.csv';a.click();
+  toast(`✅ ${filtered.length.toLocaleString()} dərman export edildi`);
+  logActivity('CSV Export edildi', `${filtered.length} dərman`);
+}
+
+requireAdmin((u,d)=>{
+  loadDrugsData();
+});
+</script>
+</body>
+</html>

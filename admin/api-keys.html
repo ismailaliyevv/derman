@@ -352,7 +352,7 @@ async function testKey(id, key, model, service){
     await db.collection('api_keys').doc(id).update({ lastTested: firebase.firestore.FieldValue.serverTimestamp(), lastTestOk: ok });
     await loadKeys();
     if(ok){ toast('✅ API açarı işləyir!','ok'); logActivity('API testi uğurlu', model); }
-    else { const e=await r.json().catch(()=>({})); toast('❌ '+（e.error?.message||`HTTP ${r.status}`),'err'); }
+    else { const e=await r.json().catch(()=>({})); toast('❌ '+(e.error?.message||`HTTP ${r.status}`),'err'); }
   } catch(e){ toast('❌ Bağlantı xətası','err'); }
 }
 

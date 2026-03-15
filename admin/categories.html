@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kateqoriyalar — AzDərman Admin</title>
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-dot"></div><div class="logo-text">AzDərman</div><div class="logo-badge">ADMIN</div></div>
+  <div class="s-section">Əsas</div>
+  <a href="dashboard.html" class="s-link"><span class="s-icon">📊</span>Dashboard</a>
+  <a href="drugs.html"     class="s-link"><span class="s-icon">💊</span>Dərmanlar</a>
+  <a href="categories.html" class="s-link active"><span class="s-icon">📂</span>Kateqoriyalar</a>
+  <div class="s-section">İstifadəçilər</div>
+  <a href="admins.html"   class="s-link"><span class="s-icon">👤</span>Admin İstifadəçilər</a>
+  <a href="logs.html"     class="s-link"><span class="s-icon">📋</span>Fəaliyyət Jurnalı</a>
+  <div class="s-section">AI & İnteqrasiya</div>
+  <a href="ai-settings.html" class="s-link"><span class="s-icon">🤖</span>AI Parametrləri</a>
+  <a href="api-keys.html"    class="s-link"><span class="s-icon">🔑</span>API Açarları</a>
+  <div class="s-section">Analitika</div>
+  <a href="analytics.html"  class="s-link"><span class="s-icon">📈</span>Statistika</a>
+  <a href="prices.html"     class="s-link"><span class="s-icon">💰</span>Qiymət Analizi</a>
+  <div class="s-section">Sistem</div>
+  <a href="settings.html"   class="s-link"><span class="s-icon">⚙️</span>Sayt Parametrləri</a>
+  <a href="../index.html"   class="s-link" target="_blank"><span class="s-icon">🌐</span>Sayta Bax</a>
+  <div class="sidebar-user">
+    <div class="u-avatar" id="adminAvatar">A</div>
+    <div class="u-info"><div class="u-name" id="adminName">Admin</div><div class="u-email" id="adminEmail"></div></div>
+    <button class="btn-logout" onclick="adminLogout()">🚪</button>
+  </div>
+</aside>
+
+<div class="main-wrap">
+  <div class="topbar">
+    <div class="tb-left"><div><div class="page-title">📂 Kateqoriyalar</div><div class="page-sub">17 kateqoriya · 13,773 dərman</div></div></div>
+    <div class="tb-right">
+      <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Yeni Kateqoriya</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- CATEGORY CARDS -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:20px" id="catCards">
+      <div class="page-loading" style="grid-column:1/-1"><span class="spin-dark" style="width:28px;height:28px;border-width:3px;display:block;"></span><p>Yüklənir...</p></div>
+    </div>
+
+    <!-- DETAIL TABLE -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title" id="detailTitle">Kateqoriya Detalları</div>
+        <div class="search-wrap" style="width:200px">
+          <span class="search-icon">⌕</span>
+          <input class="search-in" id="catDrugSearch" placeholder="Dərman axtar..." oninput="filterCatDrugs(this.value)">
+        </div>
+      </div>
+      <div style="padding:16px;color:var(--muted);font-size:.85rem;text-align:center" id="detailHint">
+        ☝️ Kateqoriya kartına klik edin — həmin kateqoriyadakı dərmanlar burada görünəcək
+      </div>
+      <div class="table-wrap" id="catDrugsTable" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Ticarət Adı</th>
+              <th>INN</th>
+              <th>Forma</th>
+              <th>Ölkə</th>
+              <th>Pərakəndə</th>
+            </tr>
+          </thead>
+          <tbody id="catDrugsTb"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="catDrugPag"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD CATEGORY MODAL -->
+<div class="modal-overlay" id="catModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">+ Yeni Kateqoriya</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--accent3);border:1px solid var(--accent4);border-radius:9px;padding:11px 14px;margin-bottom:14px;font-size:.8rem;color:var(--accent);line-height:1.6">
+        💡 Yeni kateqoriya əlavə etdikdən sonra dərmanları bu kateqoriyaya aid etmək üçün developer dəstəyi lazımdır. Hal-hazırda kateqoriyalar INN açar sözlər əsasında avtomatik təyin edilir.
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Ad *</label><input class="fi" id="mCatName" placeholder="Məs: Cərrahiyyə preparatları"></div>
+        <div class="fg"><label class="fl">İkon (emoji)</label><input class="fi" id="mCatIcon" placeholder="💊" maxlength="4" style="font-size:1.3rem"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label class="fl">Rəng</label><input class="fi" id="mCatColor" type="color" value="#1455a4" style="height:40px;padding:4px;cursor:pointer"></div>
+        <div class="fg"><label class="fl">Arxa fon rəngi</label><input class="fi" id="mCatBg" type="color" value="#e8f2ff" style="height:40px;padding:4px;cursor:pointer"></div>
+      </div>
+      <div class="fg"><label class="fl">Açar sözlər (vergüllə ayırın)</label>
+        <textarea class="fi" id="mCatKw" rows="3" placeholder="KETAMINE, PROPOFOL, MIDAZOLAM, FENTANYL"></textarea>
+        <div class="form-hint">Bu INN açar sözləri olan dərmanlar bu kateqoriyaya aid ediləcək</div>
+      </div>
+      <!-- LIVE PREVIEW -->
+      <div style="margin-top:12px">
+        <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">Önizləmə</div>
+        <div id="catPreview" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:9px;border:1.5px solid #e4e8ed;background:#fff;width:fit-content">
+          <span id="prevIcon" style="font-size:1.2rem">💊</span>
+          <div>
+            <div id="prevName" style="font-size:.8rem;font-weight:700;color:#0d1b2a">Kateqoriya adı</div>
+            <div style="font-size:.65rem;color:#6b7a8d">0 preparat</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeModal()">Ləğv</button>
+      <button class="btn btn-primary" onclick="saveCategory()">💾 Əlavə et</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+const CATS=[
+  {n:"Ağrı kəsicilər",i:"💊",c:"#e53e3e",bg:"#fff5f5",kw:["PARACETAMOL","IBUPROFEN","DICLOFENAC","NAPROXEN","TRAMADOL","MORPHINE","KETOPROFEN","MELOXICAM","KETOROLAC","ACETYLSALICYLIC","METAMIZOLE","CELECOXIB"]},
+  {n:"Antibiotiklər",i:"🦠",c:"#2b6cb0",bg:"#ebf8ff",kw:["AMOXICILLIN","AMPICILLIN","CEFTRIAXONE","CIPROFLOXACIN","LEVOFLOXACIN","AZITHROMYCIN","CLARITHROMYCIN","METRONIDAZOLE","DOXYCYCLINE","VANCOMYCIN","GENTAMICIN","AMIKACIN","MEROPENEM"]},
+  {n:"Ürək-damar",i:"❤️",c:"#c0392b",bg:"#fff5f5",kw:["ATORVASTATIN","AMLODIPINE","METOPROLOL","BISOPROLOL","ENALAPRIL","LISINOPRIL","LOSARTAN","VALSARTAN","DIGOXIN","WARFARIN","HEPARIN","CLOPIDOGREL","FUROSEMIDE","NITROGLYCERINE"]},
+  {n:"Mədə-bağırsaq",i:"🫁",c:"#2d6a4f",bg:"#f0fff4",kw:["OMEPRAZOLE","PANTOPRAZOLE","ESOMEPRAZOLE","RANITIDINE","FAMOTIDINE","DOMPERIDONE","METOCLOPRAMIDE","ONDANSETRON","LOPERAMIDE","MESALAZINE","LACTULOSE","BISMUTH","SIMETHICONE"]},
+  {n:"Tənəffüs yolları",i:"🫀",c:"#6b46c1",bg:"#faf5ff",kw:["SALBUTAMOL","BUDESONIDE","FLUTICASONE","FORMOTEROL","TIOTROPIUM","MONTELUKAST","ACETYLCYSTEINE","AMBROXOL","BROMHEXINE","THEOPHYLLINE","BECLOMETHASONE"]},
+  {n:"Sinir sistemi",i:"🧠",c:"#744210",bg:"#fffff0",kw:["PHENOBARBITAL","CARBAMAZEPINE","VALPROATE","LEVETIRACETAM","GABAPENTIN","PREGABALIN","DIAZEPAM","LORAZEPAM","ALPRAZOLAM","HALOPERIDOL","OLANZAPINE","FLUOXETINE","SERTRALINE","AMITRIPTYLINE","PIRACETAM","BETAHISTINE"]},
+  {n:"Endokrinologiya",i:"⚗️",c:"#b7791f",bg:"#fffbeb",kw:["INSULIN","METFORMIN","GLIBENCLAMIDE","SITAGLIPTIN","EMPAGLIFLOZIN","LIRAGLUTIDE","LEVOTHYROXINE","THIAMAZOLE","PREDNISONE","PREDNISOLONE","DEXAMETHASONE","TESTOSTERONE","ESTRADIOL","PROGESTERONE"]},
+  {n:"Antifungal/Antiparazit",i:"🔬",c:"#276749",bg:"#f0fff4",kw:["FLUCONAZOLE","ITRACONAZOLE","NYSTATIN","TERBINAFINE","CLOTRIMAZOLE","MICONAZOLE","ALBENDAZOLE","MEBENDAZOLE","IVERMECTIN"]},
+  {n:"Vitamin/Mineral",i:"🌿",c:"#2f855a",bg:"#f0fff4",kw:["VITAMIN","RETINOL","CHOLECALCIFEROL","TOCOPHEROL","THIAMINE","PYRIDOXINE","CYANOCOBALAMIN","FOLIC ACID","ASCORBIC ACID","CALCIUM","MAGNESIUM","ZINC","IRON","FERROUS","FERRIC","POTASSIUM"]},
+  {n:"Göz dərmanları",i:"👁️",c:"#2c5282",bg:"#ebf8ff",kw:["TIMOLOL","LATANOPROST","BIMATOPROST","BRIMONIDINE","DORZOLAMIDE","PILOCARPINE","ATROPINE","DEXAMETHASONE EYE","TOBRAMYCIN","CIPROFLOXACIN EYE","SODIUM HYALURONATE","CARBOMER"]},
+  {n:"Allerji/İmmun",i:"🌸",c:"#97266d",bg:"#fff5f7",kw:["CETIRIZINE","LORATADINE","FEXOFENADINE","DESLORATADINE","EBASTINE","LEVOCETIRIZINE","CLEMASTINE","DIPHENHYDRAMINE","MOMETASONE","FLUTICASONE NASAL","AZELASTINE","MONTELUKAST"]},
+  {n:"Onkologiya",i:"⚕️",c:"#742a2a",bg:"#fff5f5",kw:["FLUOROURACIL","CISPLATIN","CARBOPLATIN","PACLITAXEL","DOCETAXEL","DOXORUBICIN","CYCLOPHOSPHAMIDE","IMATINIB","ERLOTINIB","TAMOXIFEN","ANASTROZOLE","METHOTREXATE"]},
+  {n:"Dəri dərmanları",i:"🧴",c:"#c05621",bg:"#fffaf0",kw:["BETAMETHASONE","HYDROCORTISONE CREAM","MOMETASONE CREAM","CLOBETASOL","TACROLIMUS CREAM","ADAPALENE","TRETINOIN","ISOTRETINOIN","FUSIDIC ACID","MUPIROCIN","TERBINAFINE CREAM","CLOTRIMAZOLE CREAM","ACICLOVIR CREAM"]},
+  {n:"Sidik yolları",i:"🫘",c:"#2c7a7b",bg:"#e6fffa",kw:["TAMSULOSIN","ALFUZOSIN","DUTASTERIDE","FINASTERIDE","OXYBUTYNIN","SOLIFENACIN","TOLTERODINE","NITROFURANTOIN","FOSFOMYCIN","ALLOPURINOL","COLCHICINE"]},
+  {n:"Vaccine/Biologic",i:"💉",c:"#553c9a",bg:"#faf5ff",kw:["VACCINE","IMMUNOGLOBULIN","BCG","DTP","MMR","HEPATITIS","INFLUENZA","TETANUS","MENINGOCOCCAL","PNEUMOCOCCAL","HPV"]},
+  {n:"Əzələ/Oynaq",i:"🦴",c:"#6b46c1",bg:"#faf5ff",kw:["GLUCOSAMINE","CHONDROITIN","HYALURONIC ACID","ALENDRONATE","RISEDRONATE","BACLOFEN","TIZANIDINE","DICLOFENAC GEL","KETOPROFEN GEL","IBUPROFEN GEL"]},
+  {n:"Digər",i:"📦",c:"#718096",bg:"#f7fafc",kw:[]}
+];
+const CAT_COUNTS=[1138,1409,1412,649,435,712,868,329,1096,154,289,318,93,99,84,48,4640];
+
+let RAW=[], selectedCat=-1, catDrugsFiltered=[], catPage=1;
+
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fi(f){const m={'Tablet':'💊','Kapsul':'💊','İnyeksiya üçün məhlul':'💉','Damcı':'💧','Krem':'🧴','Gel':'🧴','Məlhəm':'🧴','Sprey':'💨','Şərbət':'🍶'};for(const k in m)if(f&&f.startsWith(k))return m[k];return'💊';}
+
+async function loadDrugsData(){
+  try{
+    const resp=await fetch('../index.html');
+    const text=await resp.text();
+    const m=text.match(/const RAW=(\[[\s\S]*?\]);[\s\S]*?const CATS/);
+    if(!m)throw new Error('Məlumat tapılmadı');
+    RAW=JSON.parse(m[1]);
+    buildCatCards();
+  }catch(e){
+    document.getElementById('catCards').innerHTML=`<div style="grid-column:1/-1;padding:20px;color:var(--red);font-size:.85rem;background:var(--red2);border-radius:10px;border:1px solid var(--red3)">⚠️ ${e.message}</div>`;
+  }
+}
+
+function buildCatCards(){
+  const maxCnt=Math.max(...CAT_COUNTS);
+  document.getElementById('catCards').innerHTML=CATS.map((c,i)=>`
+    <div onclick="selectCategory(${i})" style="background:#fff;border:1.5px solid ${selectedCat===i?c.c:'#e4e8ed'};border-radius:13px;padding:16px;cursor:pointer;transition:all .18s;box-shadow:${selectedCat===i?`0 4px 16px ${c.c}30`:'0 1px 4px rgba(0,0,0,.07)'}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="width:42px;height:42px;border-radius:10px;background:${c.bg};display:flex;align-items:center;justify-content:center;font-size:1.4rem;border:1.5px solid ${c.c}20;flex-shrink:0">${c.i}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:.88rem;color:${c.c}">${c.n}</div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:1px">${CAT_COUNTS[i].toLocaleString()} dərman · ${((CAT_COUNTS[i]/RAW.length||0)*100).toFixed(1)}%</div>
+        </div>
+        <div style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:${c.c}">${CAT_COUNTS[i].toLocaleString()}</div>
+      </div>
+      <div style="height:5px;background:#f0f2f5;border-radius:3px;overflow:hidden">
+        <div style="height:100%;border-radius:3px;background:${c.c};width:${(CAT_COUNTS[i]/maxCnt*100).toFixed(1)}%;transition:width 1s ease"></div>
+      </div>
+      ${c.kw.length?`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:3px">${c.kw.slice(0,4).map(k=>`<span style="font-size:.6rem;font-weight:600;padding:1px 7px;border-radius:4px;background:${c.bg};color:${c.c};border:1px solid ${c.c}30">${k}</span>`).join('')}${c.kw.length>4?`<span style="font-size:.6rem;color:var(--muted)">+${c.kw.length-4}</span>`:''}</div>`:''}
+    </div>`).join('');
+}
+
+function selectCategory(idx){
+  selectedCat=idx;
+  buildCatCards();
+  const cat=CATS[idx];
+  const drugs=RAW.filter(d=>d[11]===idx);
+  catDrugsFiltered=[...drugs];
+  document.getElementById('detailTitle').textContent=`${cat.i} ${cat.n} — ${drugs.length.toLocaleString()} dərman`;
+  document.getElementById('detailHint').style.display='none';
+  document.getElementById('catDrugsTable').style.display='block';
+  document.getElementById('catDrugSearch').value='';
+  catPage=1;
+  renderCatDrugs();
+}
+
+function filterCatDrugs(q){
+  const cat=CATS[selectedCat];
+  if(!cat)return;
+  const drugs=RAW.filter(d=>d[11]===selectedCat);
+  if(!q){catDrugsFiltered=[...drugs];}
+  else{catDrugsFiltered=drugs.filter(d=>(d[0]+' '+d[1]).toLowerCase().includes(q.toLowerCase()));}
+  catPage=1;renderCatDrugs();
+}
+
+function renderCatDrugs(){
+  const PER=50, total=catDrugsFiltered.length, pages=Math.ceil(total/PER);
+  if(catPage>pages&&pages>0)catPage=1;
+  const start=(catPage-1)*PER, page=catDrugsFiltered.slice(start,start+PER);
+  document.getElementById('catDrugsTb').innerHTML=page.map((d,i)=>{
+    const ret=parseFloat(d[9])||0;
+    const pc=ret<10?'var(--green)':ret<50?'var(--accent)':ret<200?'var(--gold)':'var(--red)';
+    return`<tr>
+      <td style="color:var(--muted);font-size:.72rem">${start+i+1}</td>
+      <td class="fw">${esc(d[0])}</td>
+      <td style="font-size:.74rem;color:var(--muted);font-style:italic">${esc(d[1])||'—'}</td>
+      <td style="font-size:.73rem">${fi(d[3])} ${esc(d[3])}</td>
+      <td style="font-size:.74rem">${esc(d[7])}</td>
+      <td style="font-weight:800;color:${pc};white-space:nowrap">${ret?ret.toFixed(2)+' ₼':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  const pag=document.getElementById('catDrugPag');
+  if(pages<=1){pag.innerHTML='';return;}
+  let b=`<button class="page-btn" ${catPage===1?'disabled':''} onclick="goCatPage(${catPage-1})">◀</button>`;
+  const range=[];
+  if(pages<=7){for(let i=1;i<=pages;i++)range.push(i);}
+  else{range.push(1);if(catPage>4)range.push('…');for(let i=Math.max(2,catPage-2);i<=Math.min(pages-1,catPage+2);i++)range.push(i);if(catPage<pages-3)range.push('…');range.push(pages);}
+  range.forEach(p=>{if(p==='…')b+=`<span class="page-info">…</span>`;else b+=`<button class="page-btn ${p===catPage?'active':''}" onclick="goCatPage(${p})">${p}</button>`;});
+  b+=`<button class="page-btn" ${catPage===pages?'disabled':''} onclick="goCatPage(${catPage+1})">▶</button>`;
+  b+=`<span class="page-info" style="margin-left:6px">${catPage}/${pages} · ${total.toLocaleString()} dərman</span>`;
+  pag.innerHTML=b;
+}
+function goCatPage(p){catPage=p;renderCatDrugs();}
+
+// Add modal
+function openAddModal(){document.getElementById('catModal').classList.add('open');}
+function closeModal(){document.getElementById('catModal').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+// Live preview
+['mCatName','mCatIcon','mCatColor'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('input',()=>{
+    const name=document.getElementById('mCatName').value||'Kateqoriya adı';
+    const icon=document.getElementById('mCatIcon').value||'💊';
+    const color=document.getElementById('mCatColor').value||'#1455a4';
+    const bg=document.getElementById('mCatBg').value||'#e8f2ff';
+    document.getElementById('prevIcon').textContent=icon;
+    document.getElementById('prevName').textContent=name;
+    document.getElementById('prevName').style.color=color;
+    document.getElementById('catPreview').style.borderColor=color;
+    document.getElementById('catPreview').style.background=bg;
+  });
+});
+
+async function saveCategory(){
+  const name=document.getElementById('mCatName').value.trim();
+  const icon=document.getElementById('mCatIcon').value.trim()||'📦';
+  const color=document.getElementById('mCatColor').value||'#1455a4';
+  const bg=document.getElementById('mCatBg').value||'#e8f2ff';
+  const kw=document.getElementById('mCatKw').value.split(',').map(k=>k.trim().toUpperCase()).filter(Boolean);
+  if(!name){toast('Kateqoriya adını daxil edin','err');return;}
+  try{
+    await db.collection('categories').add({
+      name,icon,color,bg,keywords:kw,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      createdBy:adminUser?.uid
+    });
+    closeModal();
+    toast(`✅ "${name}" kateqoriyası əlavə edildi`);
+    logActivity('Kateqoriya əlavə edildi',name);
+  }catch(e){toast('Xəta: '+e.message,'err');}
+}
+
+requireAdmin((u,d)=>{loadDrugsData();});
+</script>
+</body>
+</html>

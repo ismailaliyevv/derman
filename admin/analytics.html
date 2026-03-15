@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statistika — AzDərman Admin</title>
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-dot"></div><div class="logo-text">AzDərman</div><div class="logo-badge">ADMIN</div></div>
+  <div class="s-section">Əsas</div>
+  <a href="dashboard.html" class="s-link"><span class="s-icon">📊</span>Dashboard</a>
+  <a href="drugs.html"     class="s-link"><span class="s-icon">💊</span>Dərmanlar</a>
+  <a href="categories.html" class="s-link"><span class="s-icon">📂</span>Kateqoriyalar</a>
+  <div class="s-section">İstifadəçilər</div>
+  <a href="admins.html"   class="s-link"><span class="s-icon">👤</span>Admin İstifadəçilər</a>
+  <a href="logs.html"     class="s-link"><span class="s-icon">📋</span>Fəaliyyət Jurnalı</a>
+  <div class="s-section">AI & İnteqrasiya</div>
+  <a href="ai-settings.html" class="s-link"><span class="s-icon">🤖</span>AI Parametrləri</a>
+  <a href="api-keys.html"    class="s-link"><span class="s-icon">🔑</span>API Açarları</a>
+  <div class="s-section">Analitika</div>
+  <a href="analytics.html"  class="s-link active"><span class="s-icon">📈</span>Statistika</a>
+  <a href="prices.html"     class="s-link"><span class="s-icon">💰</span>Qiymət Analizi</a>
+  <div class="s-section">Sistem</div>
+  <a href="settings.html"   class="s-link"><span class="s-icon">⚙️</span>Sayt Parametrləri</a>
+  <a href="../index.html"   class="s-link" target="_blank"><span class="s-icon">🌐</span>Sayta Bax</a>
+  <div class="sidebar-user">
+    <div class="u-avatar" id="adminAvatar">A</div>
+    <div class="u-info"><div class="u-name" id="adminName">Admin</div><div class="u-email" id="adminEmail"></div></div>
+    <button class="btn-logout" onclick="adminLogout()">🚪</button>
+  </div>
+</aside>
+<div class="main-wrap">
+  <div class="topbar">
+    <div class="tb-left"><div><div class="page-title">📈 Statistika</div><div class="page-sub">Reyestr analizi</div></div></div>
+  </div>
+  <div class="content" id="mainContent">
+    <div class="page-loading"><span class="spin-dark" style="width:28px;height:28px;border-width:3px;display:block;"></span><p>Yüklənir...</p></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+function bar(val,max,color,label,cnt){
+  return`<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+    <div style="font-size:.74rem;font-weight:600;width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0">${label}</div>
+    <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:${color};width:${max?(val/max*100).toFixed(1):0}%;transition:width 1s ease"></div></div>
+    <div style="font-size:.7rem;color:var(--muted);width:44px;text-align:right;flex-shrink:0">${cnt.toLocaleString()}</div>
+  </div>`;
+}
+
+async function loadStats(){
+  const resp=await fetch('../index.html');
+  const text=await resp.text();
+  const m=text.match(/const RAW=(\[[\s\S]*?\]);[\s\S]*?const CATS/);
+  const RAW=JSON.parse(m[1]);
+
+  const CATS_N=["Ağrı kəsicilər","Antibiotiklər","Ürək-damar","Mədə-bağırsaq","Tənəffüs yolları","Sinir sistemi","Endokrinologiya","Antifungal/Antiparazit","Vitamin/Mineral","Göz dərmanları","Allerji/İmmun","Onkologiya","Dəri dərmanları","Sidik yolları","Vaccine/Biologic","Əzələ/Oynaq","Digər"];
+  const CATS_I=["💊","🦠","❤️","🫁","🫀","🧠","⚗️","🔬","🌿","👁️","🌸","⚕️","🧴","🫘","💉","🦴","📦"];
+  const CATS_C=["#e53e3e","#2b6cb0","#c0392b","#2d6a4f","#6b46c1","#744210","#b7791f","#276749","#2f855a","#2c5282","#97266d","#742a2a","#c05621","#2c7a7b","#553c9a","#6b46c1","#718096"];
+  const catCounts=new Array(17).fill(0);
+  RAW.forEach(d=>{if(d[11]>=0&&d[11]<17)catCounts[d[11]]++;});
+  const formCounts={};RAW.forEach(d=>{if(d[3])formCounts[d[3]]=(formCounts[d[3]]||0)+1;});
+  const topForms=Object.entries(formCounts).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const countryCounts={};RAW.forEach(d=>{if(d[7])countryCounts[d[7]]=(countryCounts[d[7]]||0)+1;});
+  const topCountries=Object.entries(countryCounts).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  const maxCat=Math.max(...catCounts),maxForm=topForms[0][1],maxCountry=topCountries[0][1];
+
+  // AI logs
+  let aiTotal=0,aiMonth=0;
+  try{
+    const snap=await db.collection('ai_logs').get().catch(()=>({size:0}));
+    aiTotal=snap.size||0;
+    const now=new Date();
+    const monthSnap=await db.collection('ai_logs').where('month','==',now.getMonth()).get().catch(()=>({size:0}));
+    aiMonth=monthSnap.size||0;
+  }catch(e){}
+
+  document.getElementById('mainContent').innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card accent" data-icon="💊"><div class="sc-val">13 773</div><div class="sc-label">Cəmi Preparat</div></div>
+      <div class="stat-card green" data-icon="🤖"><div class="sc-val">${aiTotal}</div><div class="sc-label">AI Sorğusu (Cəmi)</div><div class="sc-sub">Bu ay: ${aiMonth}</div></div>
+      <div class="stat-card gold" data-icon="🌍"><div class="sc-val">${Object.keys(countryCounts).length}</div><div class="sc-label">İstehsal Ölkəsi</div></div>
+      <div class="stat-card" data-icon="📝"><div class="sc-val">${Object.keys(formCounts).length}</div><div class="sc-label">Farmasevtik Forma</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">📂 Kateqoriyalar</div></div>
+        <div class="card-body">${CATS_N.map((n,i)=>bar(catCounts[i],maxCat,CATS_C[i],CATS_I[i]+' '+n,catCounts[i])).join('')}</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">💊 Farmasevtik Formalar</div></div>
+        <div class="card-body">${topForms.map(([f,n])=>bar(n,maxForm,'var(--accent2)',f,n)).join('')}</div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">🌍 İstehsal Ölkələri</div></div>
+        <div class="card-body">${topCountries.map(([c,n])=>bar(n,maxCountry,'var(--green)',c,n)).join('')}</div>
+      </div>
+    </div>`;
+}
+
+requireAdmin((u,d)=>{loadStats().catch(e=>document.getElementById('mainContent').innerHTML=`<div style="color:var(--red);padding:20px">${e.message}</div>`);});
+</script>
+</body>
+</html>

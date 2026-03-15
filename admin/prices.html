@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qiymət Analizi — AzDərman Admin</title>
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-dot"></div><div class="logo-text">AzDərman</div><div class="logo-badge">ADMIN</div></div>
+  <div class="s-section">Əsas</div>
+  <a href="dashboard.html" class="s-link"><span class="s-icon">📊</span>Dashboard</a>
+  <a href="drugs.html"     class="s-link"><span class="s-icon">💊</span>Dərmanlar</a>
+  <a href="categories.html" class="s-link"><span class="s-icon">📂</span>Kateqoriyalar</a>
+  <div class="s-section">İstifadəçilər</div>
+  <a href="admins.html"   class="s-link"><span class="s-icon">👤</span>Admin İstifadəçilər</a>
+  <a href="logs.html"     class="s-link"><span class="s-icon">📋</span>Fəaliyyət Jurnalı</a>
+  <div class="s-section">AI & İnteqrasiya</div>
+  <a href="ai-settings.html" class="s-link"><span class="s-icon">🤖</span>AI Parametrləri</a>
+  <a href="api-keys.html"    class="s-link"><span class="s-icon">🔑</span>API Açarları</a>
+  <div class="s-section">Analitika</div>
+  <a href="analytics.html"  class="s-link"><span class="s-icon">📈</span>Statistika</a>
+  <a href="prices.html"     class="s-link active"><span class="s-icon">💰</span>Qiymət Analizi</a>
+  <div class="s-section">Sistem</div>
+  <a href="settings.html"   class="s-link"><span class="s-icon">⚙️</span>Sayt Parametrləri</a>
+  <a href="../index.html"   class="s-link" target="_blank"><span class="s-icon">🌐</span>Sayta Bax</a>
+  <div class="sidebar-user">
+    <div class="u-avatar" id="adminAvatar">A</div>
+    <div class="u-info"><div class="u-name" id="adminName">Admin</div><div class="u-email" id="adminEmail"></div></div>
+    <button class="btn-logout" onclick="adminLogout()">🚪</button>
+  </div>
+</aside>
+<div class="main-wrap">
+  <div class="topbar">
+    <div class="tb-left"><div><div class="page-title">💰 Qiymət Analizi</div><div class="page-sub">Pərakəndə qiymət paylanması</div></div></div>
+  </div>
+  <div class="content" id="mainContent">
+    <div class="page-loading"><span class="spin-dark" style="width:28px;height:28px;border-width:3px;display:block;"></span><p>Yüklənir...</p></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function loadPrices(){
+  const resp=await fetch('../index.html');
+  const text=await resp.text();
+  const m=text.match(/const RAW=(\[[\s\S]*?\]);[\s\S]*?const CATS/);
+  const RAW=JSON.parse(m[1]);
+  const prices=RAW.map(d=>parseFloat(d[9])||0).filter(p=>p>0).sort((a,b)=>a-b);
+  const avg=prices.reduce((a,b)=>a+b,0)/prices.length;
+  const med=prices[Math.floor(prices.length/2)];
+  const ranges=[[0,1,'0–1 ₼'],[1,5,'1–5 ₼'],[5,10,'5–10 ₼'],[10,25,'10–25 ₼'],[25,50,'25–50 ₼'],[50,100,'50–100 ₼'],[100,250,'100–250 ₼'],[250,500,'250–500 ₼'],[500,1000,'500–1000 ₼'],[1000,Infinity,'1000+ ₼']];
+  const cnts=ranges.map(([a,b])=>prices.filter(p=>p>=a&&p<b).length);
+  const mx=Math.max(...cnts);
+
+  // Most expensive & cheapest
+  const sorted=[...RAW].filter(d=>parseFloat(d[9])>0).sort((a,b)=>(parseFloat(b[9])||0)-(parseFloat(a[9])||0));
+  const top10=sorted.slice(0,10);
+  const bot10=sorted.slice(-10).reverse();
+
+  document.getElementById('mainContent').innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card green" data-icon="💚"><div class="sc-val">${prices[0].toFixed(2)} ₼</div><div class="sc-label">Ən Ucuz</div></div>
+      <div class="stat-card red" data-icon="💎"><div class="sc-val">${prices[prices.length-1].toFixed(0)} ₼</div><div class="sc-label">Ən Baha</div></div>
+      <div class="stat-card accent" data-icon="📊"><div class="sc-val">${avg.toFixed(2)} ₼</div><div class="sc-label">Ortalama</div></div>
+      <div class="stat-card gold" data-icon="🎯"><div class="sc-val">${med.toFixed(2)} ₼</div><div class="sc-label">Median</div></div>
+      <div class="stat-card" data-icon="📉"><div class="sc-val">${prices.filter(p=>p<10).length.toLocaleString()}</div><div class="sc-label">10₼ aşağı</div><div class="sc-sub">${((prices.filter(p=>p<10).length/prices.length)*100).toFixed(1)}%</div></div>
+      <div class="stat-card" data-icon="📈"><div class="sc-val">${prices.filter(p=>p>100).length.toLocaleString()}</div><div class="sc-label">100₼ yuxarı</div><div class="sc-sub">${((prices.filter(p=>p>100).length/prices.length)*100).toFixed(1)}%</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">📊 Qiymət Aralıqları</div></div>
+        <div class="card-body">${ranges.map(([a,b,lbl],i)=>`
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+            <div style="font-size:.76rem;font-weight:600;width:90px;white-space:nowrap;flex-shrink:0">${lbl}</div>
+            <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+              <div style="height:100%;border-radius:3px;background:${a>=1000?'var(--red)':a>=500?'#c05621':a>=100?'var(--gold)':a>=25?'var(--accent)':'var(--green)'};width:${mx?(cnts[i]/mx*100).toFixed(1):0}%;transition:width 1s ease"></div>
+            </div>
+            <div style="font-size:.7rem;color:var(--muted);width:60px;text-align:right;flex-shrink:0">${cnts[i].toLocaleString()} (${((cnts[i]/prices.length)*100).toFixed(1)}%)</div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="card" style="margin-bottom:0">
+          <div class="card-head"><div class="card-title">💎 Ən Baha 10</div></div>
+          <div class="table-wrap"><table><thead><tr><th>Dərman</th><th>Qiymət</th></tr></thead>
+          <tbody>${top10.map(d=>`<tr><td style="font-size:.78rem;font-weight:600">${esc(d[0])}</td><td style="font-weight:800;color:var(--red);white-space:nowrap">${parseFloat(d[9]).toFixed(2)} ₼</td></tr>`).join('')}</tbody></table></div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+          <div class="card-head"><div class="card-title">💚 Ən Ucuz 10</div></div>
+          <div class="table-wrap"><table><thead><tr><th>Dərman</th><th>Qiymət</th></tr></thead>
+          <tbody>${bot10.map(d=>`<tr><td style="font-size:.78rem;font-weight:600">${esc(d[0])}</td><td style="font-weight:800;color:var(--green);white-space:nowrap">${parseFloat(d[9]).toFixed(2)} ₼</td></tr>`).join('')}</tbody></table></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+requireAdmin((u,d)=>{loadPrices().catch(e=>document.getElementById('mainContent').innerHTML=`<div style="color:var(--red);padding:20px">${e.message}</div>`);});
+</script>
+</body>
+</html>
