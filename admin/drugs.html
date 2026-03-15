@@ -247,33 +247,32 @@ let viewMode='grouped'; // 'grouped' | 'flat'
 const aptCache={}; // drugName -> { price, url } or null
 
 // ─────────────────────────────────────
-//  APTEKONLINE.AZ PRICE FETCH
-//  Uses their public search API endpoint
+//  APTEKONLINE.AZ QİYMƏT FETCH
+//  Məntiq:
+//  1) /products?keywords=DƏRMAN → HTML-dən $scope.products JSON-unu çək → url_id tap
+//  2) /product/URL_ID → HTML-dən $scope.product JSON-unu çək → price/discount_price götür
 // ─────────────────────────────────────
-// ─────────────────────────────────────
-//  CORS PROXY LIST — sırayla yoxlanır
-// ─────────────────────────────────────
-const PROXIES = [
-  url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-];
 
 async function proxyFetch(targetUrl) {
-  for(const proxy of PROXIES) {
-    try {
-      const r = await fetch(proxy(targetUrl), { signal: AbortSignal.timeout(6000) });
-      if(!r.ok) continue;
-      const data = await r.json().catch(() => null);
-      // allorigins wraps in { contents: "..." }
+  // allorigins.win: pulsuz CORS proxy, cavab { contents: "html..." } formatında gəlir
+  try {
+    const r = await fetch(
+      `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if(r.ok) {
+      const data = await r.json();
       if(data && data.contents) return data.contents;
-      // codetabs returns raw text as json string
-      if(typeof data === 'string') return data;
-      // corsproxy returns raw text
-      const text = await r.text().catch(() => null);
-      if(text) return text;
-    } catch(e) { continue; }
-  }
+    }
+  } catch(e) {}
+  // Yedək: corsproxy.io
+  try {
+    const r = await fetch(
+      `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    if(r.ok) return await r.text();
+  } catch(e) {}
   return null;
 }
 
@@ -289,57 +288,58 @@ async function fetchAptPrice(drugName, cellId) {
 
   cell.innerHTML = `<span class="apt-loading"><span class="spin spin-dark" style="width:10px;height:10px;border-width:1.5px"></span></span>`;
 
-  const query = encodeURIComponent(drugName.trim());
-  const targetUrl = `https://aptekonline.az/products?keywords=${query}`;
+  const searchUrl = `https://aptekonline.az/products?keywords=${encodeURIComponent(drugName)}`;
 
   try {
-    const html = await proxyFetch(targetUrl);
+    // ADDIM 1: Axtarış səhifəsini çək
+    const searchHtml = await proxyFetch(searchUrl);
+    if(!searchHtml) throw new Error('proxy failed');
 
-    if(!html) throw new Error('proxy failed');
+    // Axtarış nəticəsindən ilk məhsulun url_id-sini tap
+    // Angular kodu içindəki: "url_id":"AUGMENTIN--875MQ--N14-..."
+    const urlIdMatch = searchHtml.match(/"url_id"\s*:\s*"([^"]+)"/);
+    if(!urlIdMatch) {
+      aptCache[cacheKey] = null;
+      renderAptPrice(cell, null);
+      return;
+    }
+    const urlId = urlIdMatch[1];
+    const productUrl = `https://aptekonline.az/product/${urlId}`;
 
-    // Parse prices from the HTML
-    // aptekonline.az shows prices like: 12.50 ₼  or  data-price="12.50"
-    const prices = [];
+    // ADDIM 2: Məhsul səhifəsini çək
+    const productHtml = await proxyFetch(productUrl);
+    if(!productHtml) throw new Error('no product html');
 
-    // Method 1: JSON-LD or data attributes
-    const jsonMatches = html.match(/"price"\s*:\s*"?([\d.]+)"?/g) || [];
-    jsonMatches.forEach(m => {
-      const v = parseFloat(m.match(/([\d.]+)/)?.[1]);
-      if(v > 0.1 && v < 10000) prices.push(v);
-    });
+    // $scope.product = {...} JSON-undan price oxu
+    // Nümunə: $scope.product = {"id":104358,...,"price":7.6,...}
+    const scopeMatch = productHtml.match(/\$scope\.product\s*=\s*(\{[\s\S]*?\});/);
+    if(scopeMatch) {
+      try {
+        const obj = JSON.parse(scopeMatch[1]);
+        const finalPrice = obj.discount_price ? parseFloat(obj.discount_price) : parseFloat(obj.price);
+        const origPrice  = obj.discount_price ? parseFloat(obj.price) : null;
+        if(finalPrice > 0) {
+          aptCache[cacheKey] = { price: finalPrice.toFixed(2), oldPrice: origPrice ? origPrice.toFixed(2) : null, url: productUrl };
+          renderAptPrice(cell, aptCache[cacheKey]);
+          return;
+        }
+      } catch(e) {}
+    }
 
-    // Method 2: visible price patterns like 12.50 ₼
-    const visibleMatches = html.match(/([\d]+\.[\d]{1,2})\s*(?:₼|AZN|manat)/gi) || [];
-    visibleMatches.forEach(m => {
-      const v = parseFloat(m);
-      if(v > 0.1 && v < 10000) prices.push(v);
-    });
-
-    // Method 3: price class spans
-    const spanMatches = html.match(/class="[^"]*price[^"]*"[^>]*>([\d.,\s]+)</gi) || [];
-    spanMatches.forEach(m => {
-      const v = parseFloat(m.replace(/[^\d.]/g, ''));
-      if(v > 0.1 && v < 10000) prices.push(v);
-    });
-
-    if(prices.length > 0) {
-      const minPrice = Math.min(...prices);
-      const maxPrice = Math.max(...prices);
-      const result = {
-        price: prices.length > 1 ? `${minPrice.toFixed(2)}–${maxPrice.toFixed(2)}` : minPrice.toFixed(2),
-        url: targetUrl,
-        count: prices.length
-      };
-      aptCache[cacheKey] = result;
-      renderAptPrice(cell, result);
+    // Fallback: sadə regex ilə "price":7.6
+    const dpMatch = productHtml.match(/"discount_price"\s*:\s*([\d.]+)/);
+    const pMatch  = productHtml.match(/"price"\s*:\s*([\d.]+)/);
+    const fp = dpMatch ? parseFloat(dpMatch[1]) : pMatch ? parseFloat(pMatch[1]) : 0;
+    if(fp > 0) {
+      aptCache[cacheKey] = { price: fp.toFixed(2), oldPrice: dpMatch && pMatch ? parseFloat(pMatch[1]).toFixed(2) : null, url: productUrl };
+      renderAptPrice(cell, aptCache[cacheKey]);
     } else {
-      // HTML loaded but no price found — drug may not be on site
       aptCache[cacheKey] = null;
       renderAptPrice(cell, null);
     }
   } catch(e) {
     aptCache[cacheKey] = 'err';
-    cell.innerHTML = `<a href="${targetUrl}" target="_blank" class="fetch-btn">🔍 Axtar</a>`;
+    cell.innerHTML = `<a href="${searchUrl}" target="_blank" class="fetch-btn">🔍 Axtar</a>`;
   }
 }
 
@@ -348,12 +348,14 @@ function renderAptPrice(cell, result) {
     cell.innerHTML = `<span class="apt-na">—</span>`;
     return;
   }
-  const countBadge = result.count > 1 ? `<span style="font-size:.6rem;color:var(--muted)">(${result.count})</span>` : '';
+  const oldBadge = result.oldPrice
+    ? `<span style="font-size:.65rem;color:var(--muted);text-decoration:line-through">${result.oldPrice}</span>`
+    : '';
   cell.innerHTML = `<span class="apt-price">
     <a href="${esc(result.url)}" target="_blank" style="text-decoration:none">
       <span class="price-val">${result.price} ₼</span>
     </a>
-    ${countBadge}
+    ${oldBadge}
     <span class="price-src">apt</span>
   </span>`;
 }
