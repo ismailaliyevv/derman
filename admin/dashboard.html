@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — AzDərman Admin</title>
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-dot"></div>
+    <div class="logo-text">AzDərman</div>
+    <div class="logo-badge">ADMIN</div>
+  </div>
+  <div class="s-section">Əsas</div>
+  <a href="dashboard.html" class="s-link active"><span class="s-icon">📊</span>Dashboard</a>
+  <a href="drugs.html"     class="s-link"><span class="s-icon">💊</span>Dərmanlar</a>
+  <a href="categories.html" class="s-link"><span class="s-icon">📂</span>Kateqoriyalar</a>
+  <div class="s-section">İstifadəçilər</div>
+  <a href="admins.html"   class="s-link"><span class="s-icon">👤</span>Admin İstifadəçilər</a>
+  <a href="logs.html"     class="s-link"><span class="s-icon">📋</span>Fəaliyyət Jurnalı</a>
+  <div class="s-section">AI & İnteqrasiya</div>
+  <a href="ai-settings.html" class="s-link"><span class="s-icon">🤖</span>AI Parametrləri</a>
+  <a href="api-keys.html"    class="s-link"><span class="s-icon">🔑</span>API Açarları</a>
+  <div class="s-section">Analitika</div>
+  <a href="analytics.html"  class="s-link"><span class="s-icon">📈</span>Statistika</a>
+  <a href="prices.html"     class="s-link"><span class="s-icon">💰</span>Qiymət Analizi</a>
+  <div class="s-section">Sistem</div>
+  <a href="settings.html"   class="s-link"><span class="s-icon">⚙️</span>Sayt Parametrləri</a>
+  <a href="../index.html"   class="s-link" target="_blank"><span class="s-icon">🌐</span>Sayta Bax</a>
+  <div class="sidebar-user">
+    <div class="u-avatar" id="adminAvatar">A</div>
+    <div class="u-info">
+      <div class="u-name" id="adminName">Admin</div>
+      <div class="u-email" id="adminEmail"></div>
+    </div>
+    <button class="btn-logout" onclick="adminLogout()" title="Çıxış">🚪</button>
+  </div>
+</aside>
+
+<div class="main-wrap">
+  <div class="topbar">
+    <div class="tb-left">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub" id="dateStr"></div>
+      </div>
+    </div>
+    <div class="tb-right">
+      <button class="btn btn-secondary btn-sm" onclick="refreshData()">🔄 Yenilə</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- STAT CARDS -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card accent" data-icon="💊"><div class="sc-val" id="sc-total">—</div><div class="sc-label">Cəmi Preparat</div><div class="sc-sub">Reyestrdə</div></div>
+      <div class="stat-card green" data-icon="📂"><div class="sc-val" id="sc-cats">17</div><div class="sc-label">Kateqoriya</div><div class="sc-sub">Aktiv</div></div>
+      <div class="stat-card gold" data-icon="🌍"><div class="sc-val" id="sc-countries">—</div><div class="sc-label">İstehsal Ölkəsi</div></div>
+      <div class="stat-card accent" data-icon="💰"><div class="sc-val" id="sc-avgprice">—</div><div class="sc-label">Orta Qiymət</div><div class="sc-sub">Pərakəndə ₼</div></div>
+      <div class="stat-card green" data-icon="🤖"><div class="sc-val" id="sc-ai">—</div><div class="sc-label">AI Sorğu</div><div class="sc-sub">Bu ay</div></div>
+      <div class="stat-card" data-icon="👤"><div class="sc-val" id="sc-admins">—</div><div class="sc-label">Admin Sayı</div></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+      <!-- CATEGORY CHART -->
+      <div class="card">
+        <div class="card-head"><div class="card-title">📂 Kateqoriya paylanması</div></div>
+        <div class="card-body" id="catChart"><div class="page-loading"><span class="spin-dark"></span><p>Yüklənir...</p></div></div>
+      </div>
+      <!-- COUNTRY CHART -->
+      <div class="card">
+        <div class="card-head"><div class="card-title">🌍 Top 10 İstehsal ölkəsi</div></div>
+        <div class="card-body" id="countryChart"><div class="page-loading"><span class="spin-dark"></span><p>Yüklənir...</p></div></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <!-- PRICE DISTRIBUTION -->
+      <div class="card">
+        <div class="card-head"><div class="card-title">💰 Qiymət paylanması</div></div>
+        <div class="card-body" id="priceChart"><div class="page-loading"><span class="spin-dark"></span></div></div>
+      </div>
+      <!-- RECENT LOGS -->
+      <div class="card">
+        <div class="card-head"><div class="card-title">📋 Son Fəaliyyətlər</div></div>
+        <div class="card-body" style="padding:0" id="recentLogs"><div class="page-loading"><span class="spin-dark"></span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+// Date
+document.getElementById('dateStr').textContent = new Date().toLocaleDateString('az-AZ',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+const CATS=[
+  {n:"Ağrı kəsicilər",i:"💊",c:"#e53e3e"},{n:"Antibiotiklər",i:"🦠",c:"#2b6cb0"},
+  {n:"Ürək-damar",i:"❤️",c:"#c0392b"},{n:"Mədə-bağırsaq",i:"🫁",c:"#2d6a4f"},
+  {n:"Tənəffüs yolları",i:"🫀",c:"#6b46c1"},{n:"Sinir sistemi",i:"🧠",c:"#744210"},
+  {n:"Endokrinologiya",i:"⚗️",c:"#b7791f"},{n:"Antifungal/Antiparazit",i:"🔬",c:"#276749"},
+  {n:"Vitamin/Mineral",i:"🌿",c:"#2f855a"},{n:"Göz dərmanları",i:"👁️",c:"#2c5282"},
+  {n:"Allerji/İmmun",i:"🌸",c:"#97266d"},{n:"Onkologiya",i:"⚕️",c:"#742a2a"},
+  {n:"Dəri dərmanları",i:"🧴",c:"#c05621"},{n:"Sidik yolları",i:"🫘",c:"#2c7a7b"},
+  {n:"Vaccine/Biologic",i:"💉",c:"#553c9a"},{n:"Əzələ/Oynaq",i:"🦴",c:"#6b46c1"},
+  {n:"Digər",i:"📦",c:"#718096"}
+];
+const CAT_COUNTS=[1138,1409,1412,649,435,712,868,329,1096,154,289,318,93,99,84,48,4640];
+
+function bar(val, max, color, label, cnt) {
+  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+    <span style="width:22px;text-align:center;font-size:.85rem">${label}</span>
+    <div style="flex:1">
+      <div style="display:flex;justify-content:space-between;font-size:.71rem;font-weight:600;margin-bottom:3px">
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px" title="${label}">${label}</span>
+        <span style="color:var(--muted);flex-shrink:0;margin-left:4px">${cnt.toLocaleString()}</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" style="width:${max?(val/max*100).toFixed(1):0}%;background:${color}"></div></div>
+    </div>
+  </div>`;
+}
+
+async function loadDashboard() {
+  // Stats from Firestore
+  try {
+    const [aiSnap, adminSnap] = await Promise.all([
+      db.collection('ai_logs').where('month', '==', new Date().getMonth()).get().catch(()=>({size:0})),
+      db.collection('admins').get()
+    ]);
+    document.getElementById('sc-total').textContent = '13 773';
+    document.getElementById('sc-countries').textContent = '78';
+    document.getElementById('sc-avgprice').textContent = '91 ₼';
+    document.getElementById('sc-ai').textContent = aiSnap.size || '—';
+    document.getElementById('sc-admins').textContent = adminSnap.size || '—';
+  } catch(e) {
+    document.getElementById('sc-total').textContent = '13 773';
+    document.getElementById('sc-countries').textContent = '78';
+    document.getElementById('sc-avgprice').textContent = '91 ₼';
+  }
+
+  // Category chart
+  const maxCat = Math.max(...CAT_COUNTS);
+  document.getElementById('catChart').innerHTML = CATS.map((c,i) =>
+    bar(CAT_COUNTS[i], maxCat, c.c, c.i+' '+c.n, CAT_COUNTS[i])
+  ).join('');
+
+  // Country chart
+  const countries = [['Türkiyə',2417],['Almaniya',1379],['Rusiya',1121],['Hindistan',969],['Ukrayna',680],['İtaliya',520],['Macarıstan',411],['Sloveniya',408],['İspaniya',404],['Fransa',351]];
+  const maxC = countries[0][1];
+  document.getElementById('countryChart').innerHTML = countries.map(([c,n]) =>
+    bar(n, maxC, 'var(--accent2)', c, n)
+  ).join('');
+
+  // Price chart
+  const ranges=[['0–1₼',312],['1–5₼',1840],['5–10₼',1560],['10–25₼',2890],['25–50₼',2340],['50–100₼',1820],['100–250₼',1240],['250–500₼',520],['500+₼',310]];
+  const maxP = Math.max(...ranges.map(r=>r[1]));
+  document.getElementById('priceChart').innerHTML = ranges.map(([lbl,n],i) =>
+    bar(n, maxP, i<3?'var(--green)':i<6?'var(--accent)':i<8?'var(--gold)':'var(--red)', lbl, n)
+  ).join('');
+
+  // Recent logs from Firestore
+  try {
+    const logs = await db.collection('admin_logs').orderBy('timestamp','desc').limit(8).get();
+    if(logs.empty) {
+      document.getElementById('recentLogs').innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Hələ fəaliyyət yoxdur</div></div>';
+    } else {
+      document.getElementById('recentLogs').innerHTML = '<div style="font-size:.8rem">'+logs.docs.map(d=>{
+        const l=d.data();
+        return `<div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+          <div style="width:30px;height:30px;border-radius:50%;background:var(--accent3);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:var(--accent);flex-shrink:0">${(l.name||'A')[0]}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.action||'—'}</div>
+            <div style="font-size:.7rem;color:var(--muted)">${l.name||'Admin'} · ${fmtDate(l.timestamp)}</div>
+          </div>
+        </div>`;
+      }).join('')+'</div>';
+    }
+  } catch(e) {
+    document.getElementById('recentLogs').innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Log yükləmək olmadı</div></div>';
+  }
+}
+
+function refreshData() { toast('🔄 Yeniləndi'); loadDashboard(); }
+
+requireAdmin((user, data) => {
+  loadDashboard();
+  logActivity('Dashboard açıldı');
+});
+</script>
+</body>
+</html>

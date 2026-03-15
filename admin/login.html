@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Giriş — AzDərman</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#0a2342 0%,#1455a4 50%,#0f6b8a 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.04) 1px,transparent 0);background-size:32px 32px;pointer-events:none;}
+.card{background:#fff;border-radius:20px;padding:40px 36px;width:100%;max-width:420px;box-shadow:0 24px 80px rgba(10,35,66,.4);position:relative;animation:fadeUp .4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.logo-dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,#1455a4,#0f6b8a);}
+.logo-text{font-family:'Syne',sans-serif;font-size:1.35rem;font-weight:800;color:#0a2342;}
+.subtitle{font-size:.8rem;color:#9aa5b1;margin-bottom:32px;padding-left:20px;}
+h2{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:#0d1b2a;margin-bottom:6px;}
+.desc{font-size:.8rem;color:#6b7a8d;margin-bottom:24px;line-height:1.6;}
+.fg{margin-bottom:14px;}
+.fl{display:block;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#2d3f50;margin-bottom:6px;}
+.fi{width:100%;padding:11px 14px;border:1.5px solid #e4e8ed;border-radius:10px;font-family:'Inter',sans-serif;font-size:.88rem;color:#0d1b2a;outline:none;transition:border-color .2s,box-shadow .2s;}
+.fi:focus{border-color:#1455a4;box-shadow:0 0 0 3px rgba(20,85,164,.1);}
+.fi::placeholder{color:#9aa5b1;}
+.pw-wrap{position:relative;}
+.pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1rem;color:#9aa5b1;padding:2px;}
+.btn{width:100%;padding:13px;background:linear-gradient(135deg,#1455a4,#0f6b8a);color:#fff;border:none;border-radius:11px;font-family:'Inter',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:4px;box-shadow:0 4px 16px rgba(20,85,164,.3);}
+.btn:hover{opacity:.92;transform:translateY(-1px);}
+.btn:disabled{opacity:.6;cursor:default;transform:none;}
+.err{background:#fff5f5;border:1.5px solid #f5c6c2;border-radius:9px;padding:11px 14px;font-size:.82rem;color:#c0392b;font-weight:600;margin-bottom:14px;display:none;}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.back-link{text-align:center;margin-top:18px;font-size:.8rem;color:#9aa5b1;}
+.back-link a{color:#1455a4;font-weight:600;text-decoration:none;}
+.back-link a:hover{text-decoration:underline;}
+.shield{position:absolute;top:-18px;left:50%;transform:translateX(-50%);width:36px;height:36px;background:linear-gradient(135deg,#1455a4,#0f6b8a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;box-shadow:0 4px 12px rgba(20,85,164,.4);}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="shield">🔐</div>
+  <div style="height:12px"></div>
+  <div class="logo"><div class="logo-dot"></div><div class="logo-text">AzDərman</div></div>
+  <div class="subtitle">Admin İdarəetmə Paneli</div>
+  <h2>Xoş gəldiniz</h2>
+  <div class="desc">Davam etmək üçün admin hesabınıza daxil olun.</div>
+  <div class="err" id="errBox"></div>
+  <div class="fg"><label class="fl">Email</label><input class="fi" id="email" type="email" placeholder="admin@azderman.az" autocomplete="username"></div>
+  <div class="fg"><label class="fl">Şifrə</label>
+    <div class="pw-wrap">
+      <input class="fi" id="pass" type="password" placeholder="••••••••" autocomplete="current-password">
+      <button class="pw-eye" onclick="togglePw()" type="button">👁</button>
+    </div>
+  </div>
+  <button class="btn" id="loginBtn" onclick="doLogin()">Daxil ol</button>
+  <div class="back-link"><a href="../index.html">← Ana səhifəyə qayıt</a></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script>
+function togglePw(){ const i=document.getElementById('pass'); i.type=i.type==='password'?'text':'password'; }
+
+function showErr(msg){ const e=document.getElementById('errBox'); e.textContent=msg; e.style.display='block'; }
+function hideErr(){ document.getElementById('errBox').style.display='none'; }
+
+async function doLogin(){
+  hideErr();
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('pass').value;
+  if(!email||!pass){ showErr('Email və şifrəni daxil edin.'); return; }
+
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Yüklənir...';
+
+  try {
+    const cred = await auth.signInWithEmailAndPassword(email, pass);
+    // Check if admin role in Firestore
+    const snap = await db.collection('admins').doc(cred.user.uid).get();
+    if(!snap.exists || snap.data().role !== 'admin'){
+      await auth.signOut();
+      showErr('Bu hesab admin deyil. İcazəniz yoxdur.');
+      btn.disabled=false; btn.textContent='Daxil ol';
+      return;
+    }
+    // Save last login
+    await db.collection('admins').doc(cred.user.uid).update({
+      lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    window.location.href = 'dashboard.html';
+  } catch(e) {
+    const msgs = {
+      'auth/user-not-found':'Bu email ilə hesab tapılmadı.',
+      'auth/wrong-password':'Şifrə yanlışdır.',
+      'auth/invalid-email':'Email formatı yanlışdır.',
+      'auth/too-many-requests':'Çox cəhd. Bir az gözləyin.',
+      'auth/invalid-credential':'Email və ya şifrə yanlışdır.',
+    };
+    showErr(msgs[e.code]||e.message);
+    btn.disabled=false; btn.textContent='Daxil ol';
+  }
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+
+// Already logged in? Redirect
+auth.onAuthStateChanged(async u=>{
+  if(u){
+    const snap=await db.collection('admins').doc(u.uid).get().catch(()=>null);
+    if(snap?.exists && snap.data().role==='admin') window.location.href='dashboard.html';
+  }
+});
+</script>
+</body>
+</html>

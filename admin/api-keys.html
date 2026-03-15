@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Açarları — AzDərman Admin</title>
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-dot"></div><div class="logo-text">AzDərman</div><div class="logo-badge">ADMIN</div></div>
+  <div class="s-section">Əsas</div>
+  <a href="dashboard.html" class="s-link"><span class="s-icon">📊</span>Dashboard</a>
+  <a href="drugs.html"     class="s-link"><span class="s-icon">💊</span>Dərmanlar</a>
+  <a href="categories.html" class="s-link"><span class="s-icon">📂</span>Kateqoriyalar</a>
+  <div class="s-section">İstifadəçilər</div>
+  <a href="admins.html"   class="s-link"><span class="s-icon">👤</span>Admin İstifadəçilər</a>
+  <a href="logs.html"     class="s-link"><span class="s-icon">📋</span>Fəaliyyət Jurnalı</a>
+  <div class="s-section">AI & İnteqrasiya</div>
+  <a href="ai-settings.html" class="s-link"><span class="s-icon">🤖</span>AI Parametrləri</a>
+  <a href="api-keys.html"    class="s-link active"><span class="s-icon">🔑</span>API Açarları</a>
+  <div class="s-section">Analitika</div>
+  <a href="analytics.html"  class="s-link"><span class="s-icon">📈</span>Statistika</a>
+  <a href="prices.html"     class="s-link"><span class="s-icon">💰</span>Qiymət Analizi</a>
+  <div class="s-section">Sistem</div>
+  <a href="settings.html"   class="s-link"><span class="s-icon">⚙️</span>Sayt Parametrləri</a>
+  <a href="../index.html"   class="s-link" target="_blank"><span class="s-icon">🌐</span>Sayta Bax</a>
+  <div class="sidebar-user">
+    <div class="u-avatar" id="adminAvatar">A</div>
+    <div class="u-info"><div class="u-name" id="adminName">Admin</div><div class="u-email" id="adminEmail"></div></div>
+    <button class="btn-logout" onclick="adminLogout()">🚪</button>
+  </div>
+</aside>
+
+<div class="main-wrap">
+  <div class="topbar">
+    <div class="tb-left">
+      <div><div class="page-title">🔑 API Açarları</div><div class="page-sub">AI inteqrasiyası üçün açarlar</div></div>
+    </div>
+    <div class="tb-right">
+      <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Açar Əlavə Et</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ACTIVE KEY STATUS -->
+    <div id="activeKeyCard" style="margin-bottom:16px"></div>
+
+    <!-- KEYS TABLE -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Bütün API Açarları</div>
+        <div class="search-wrap" style="width:220px">
+          <span class="search-icon">⌕</span>
+          <input class="search-in" placeholder="Axtar..." oninput="filterKeys(this.value)" id="keySearch">
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ad</th>
+              <th>Servis</th>
+              <th>Açar (gizli)</th>
+              <th>Status</th>
+              <th>Aktiv Model</th>
+              <th>Son Test</th>
+              <th>Əməliyyat</th>
+            </tr>
+          </thead>
+          <tbody id="keysTb">
+            <tr><td colspan="7"><div class="page-loading"><span class="spin-dark"></span><p>Yüklənir...</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USAGE INFO -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      <div class="card">
+        <div class="card-head"><div class="card-title">💰 OpenRouter Qiymətləri</div></div>
+        <div class="card-body">
+          <div style="font-size:.8rem;line-height:1.9;color:var(--ink2)">
+            <div style="font-weight:700;margin-bottom:6px;color:var(--ink)">Tövsiyə olunan modellər:</div>
+            <div>⚡ <strong>claude-haiku-4.5</strong> — sürətli, ucuz</div>
+            <div style="color:var(--muted);font-size:.73rem;padding-left:16px">Input: $0.80/1M · Output: $4/1M</div>
+            <div>✦ <strong>claude-sonnet-4-5</strong> — dəqiq</div>
+            <div style="color:var(--muted);font-size:.73rem;padding-left:16px">Input: $3/1M · Output: $15/1M</div>
+            <div>🟢 <strong>gpt-4o-mini</strong> — ucuz</div>
+            <div style="color:var(--muted);font-size:.73rem;padding-left:16px">Input: $0.15/1M · Output: $0.60/1M</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">🔒 Təhlükəsizlik</div></div>
+        <div class="card-body">
+          <div style="font-size:.8rem;color:var(--ink2);line-height:1.8">
+            <div>✅ Açarlar Firebase Firestore-da şifrələnmiş saxlanılır</div>
+            <div>✅ Yalnız admin paneldən əlçatandır</div>
+            <div>✅ Ana səhifədə görünmür</div>
+            <div>✅ Hər açar üçün fəaliyyət logu</div>
+            <div>⚠️ Açarı heç vaxt paylaşmayın</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">📊 Bu Ay İstifadə</div></div>
+        <div class="card-body" id="usageStats">
+          <div class="page-loading"><span class="spin-dark"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="keyModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">+ Yeni API Açarı</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg"><label class="fl">Ad *</label><input class="fi" id="mName" placeholder="Məs: OpenRouter Ana Açarı"></div>
+      <div class="fg">
+        <label class="fl">Servis *</label>
+        <select class="fi" id="mService" onchange="updateModelList()">
+          <option value="openrouter">OpenRouter</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="google">Google AI</option>
+          <option value="other">Digər</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">API Açarı *</label>
+        <div style="position:relative">
+          <input class="fi" id="mKey" type="password" placeholder="sk-or-v1-..." style="font-family:monospace;padding-right:40px">
+          <button onclick="document.getElementById('mKey').type=document.getElementById('mKey').type==='password'?'text':'password'" type="button" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted)">👁</button>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Aktiv Model</label>
+        <select class="fi" id="mModel"></select>
+      </div>
+      <div class="fg"><label class="fl">Qeyd</label><textarea class="fi" id="mNote" placeholder="Açar haqqında qeyd..." rows="2"></textarea></div>
+      <div class="toggle-row">
+        <div><div class="toggle-lbl">Aktiv et</div><div class="toggle-sub">Bu açarı AI sorğularda istifadə et</div></div>
+        <label class="tgl"><input type="checkbox" id="mActive" checked><div class="tgl-sl"></div></label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeModal()">Ləğv</button>
+      <button class="btn btn-primary" onclick="saveKey()" id="saveKeyBtn">💾 Saxla</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+const MODELS = {
+  openrouter: ['anthropic/claude-haiku-4.5','anthropic/claude-sonnet-4-5','openai/gpt-4o-mini','openai/gpt-4o','google/gemini-flash-1.5','meta-llama/llama-3.1-70b-instruct'],
+  openai:     ['gpt-4o','gpt-4o-mini','gpt-4-turbo','gpt-3.5-turbo'],
+  anthropic:  ['claude-haiku-4-5-20251001','claude-sonnet-4-5-20251001','claude-opus-4-5'],
+  google:     ['gemini-1.5-flash','gemini-1.5-pro','gemini-pro'],
+  other:      ['custom']
+};
+
+function updateModelList(){
+  const svc = document.getElementById('mService').value;
+  const sel = document.getElementById('mModel');
+  sel.innerHTML = (MODELS[svc]||['custom']).map(m=>`<option value="${m}">${m}</option>`).join('');
+}
+
+let allKeys = [];
+let editId = null;
+
+function openAddModal(){
+  editId = null;
+  document.getElementById('modalTitle').textContent = '+ Yeni API Açarı';
+  document.getElementById('mName').value = '';
+  document.getElementById('mService').value = 'openrouter';
+  document.getElementById('mKey').value = '';
+  document.getElementById('mNote').value = '';
+  document.getElementById('mActive').checked = true;
+  updateModelList();
+  document.getElementById('keyModal').classList.add('open');
+}
+
+function closeModal(){ document.getElementById('keyModal').classList.remove('open'); }
+
+function maskKey(k){ if(!k) return '—'; return k.substring(0,8)+'••••••••'+k.slice(-4); }
+
+async function loadKeys(){
+  try {
+    const snap = await db.collection('api_keys').orderBy('createdAt','desc').get();
+    allKeys = snap.docs.map(d=>({id:d.id,...d.data()}));
+    renderKeys(allKeys);
+
+    // Show active key banner
+    const active = allKeys.find(k=>k.isActive);
+    const banner = document.getElementById('activeKeyCard');
+    if(active){
+      banner.innerHTML = `<div style="background:var(--green2);border:1.5px solid var(--green3);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:1.3rem">🟢</span>
+        <div style="flex:1">
+          <div style="font-weight:700;color:var(--green)">${active.name} — Aktiv</div>
+          <div style="font-size:.77rem;color:var(--green);opacity:.8">Servis: ${active.service} · Model: ${active.model} · ${maskKey(active.key)}</div>
+        </div>
+        <button class="btn btn-sm" style="background:var(--green);color:#fff;border:none" onclick="testKey('${active.id}','${active.key}','${active.model}','${active.service}')">🧪 Test</button>
+      </div>`;
+    } else {
+      banner.innerHTML = `<div style="background:var(--red2);border:1.5px solid var(--red3);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:1.3rem">🔴</span>
+        <div><div style="font-weight:700;color:var(--red)">Aktiv API açarı yoxdur</div><div style="font-size:.77rem;color:var(--red);opacity:.8">AI funksiyası işləmir. Açar əlavə edib aktiv edin.</div></div>
+        <button class="btn btn-sm btn-primary" onclick="openAddModal()">+ Açar Əlavə Et</button>
+      </div>`;
+    }
+
+    // Usage stats
+    try {
+      const logsSnap = await db.collection('ai_logs').orderBy('timestamp','desc').limit(100).get();
+      const logs = logsSnap.docs.map(d=>d.data());
+      const thisMonth = logs.filter(l=>{ const d=l.timestamp?.toDate?.();return d&&d.getMonth()===new Date().getMonth();});
+      document.getElementById('usageStats').innerHTML = `
+        <div style="font-size:.85rem;line-height:2">
+          <div>📊 Bu ay: <strong>${thisMonth.length}</strong> sorğu</div>
+          <div>📈 Cəmi: <strong>${logs.length}</strong> sorğu</div>
+          <div>💰 Təxmini: <strong>~${(thisMonth.length*0.002).toFixed(3)}$</strong></div>
+        </div>`;
+    } catch(e) {
+      document.getElementById('usageStats').innerHTML = '<div style="font-size:.82rem;color:var(--muted)">Statistika yüklənmədi</div>';
+    }
+  } catch(e) {
+    document.getElementById('keysTb').innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-icon">❌</div><div class="empty-text">${e.message}</div></div></td></tr>`;
+  }
+}
+
+function renderKeys(keys){
+  if(!keys.length){
+    document.getElementById('keysTb').innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">🔑</div><div class="empty-text">Hələ açar əlavə edilməyib</div></div></td></tr>';
+    return;
+  }
+  document.getElementById('keysTb').innerHTML = keys.map(k=>`<tr>
+    <td class="fw">${k.name||'—'}</td>
+    <td><span class="badge badge-blue">${k.service||'—'}</span></td>
+    <td style="font-family:monospace;font-size:.75rem;color:var(--muted)">${maskKey(k.key)}</td>
+    <td><span class="badge ${k.isActive?'badge-green':'badge-gray'}">${k.isActive?'🟢 Aktiv':'⚪ Passiv'}</span></td>
+    <td style="font-size:.75rem;color:var(--ink2)">${k.model||'—'}</td>
+    <td style="font-size:.73rem;color:var(--muted)">${fmtDate(k.lastTested)||'—'}</td>
+    <td>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-sm btn-secondary" onclick="editKey('${k.id}')">✏️</button>
+        <button class="btn btn-sm btn-success" onclick="testKey('${k.id}','${k.key}','${k.model}','${k.service}')">🧪</button>
+        ${!k.isActive?`<button class="btn btn-sm btn-primary" onclick="setActive('${k.id}')">Aktiv et</button>`:''}
+        <button class="btn btn-sm btn-danger" onclick="deleteKey('${k.id}','${k.name}')">🗑</button>
+      </div>
+    </td>
+  </tr>`).join('');
+}
+
+function filterKeys(q){
+  if(!q){ renderKeys(allKeys); return; }
+  renderKeys(allKeys.filter(k=>(k.name+k.service+k.model).toLowerCase().includes(q.toLowerCase())));
+}
+
+function editKey(id){
+  const k = allKeys.find(x=>x.id===id); if(!k) return;
+  editId = id;
+  document.getElementById('modalTitle').textContent = '✏️ Açarı Redaktə et';
+  document.getElementById('mName').value = k.name||'';
+  document.getElementById('mService').value = k.service||'openrouter';
+  document.getElementById('mKey').value = k.key||'';
+  document.getElementById('mNote').value = k.note||'';
+  document.getElementById('mActive').checked = k.isActive||false;
+  updateModelList();
+  document.getElementById('mModel').value = k.model||'';
+  document.getElementById('keyModal').classList.add('open');
+}
+
+async function saveKey(){
+  const name = document.getElementById('mName').value.trim();
+  const key  = document.getElementById('mKey').value.trim();
+  const svc  = document.getElementById('mService').value;
+  const model= document.getElementById('mModel').value;
+  const note = document.getElementById('mNote').value;
+  const active = document.getElementById('mActive').checked;
+
+  if(!name||!key){ toast('Ad və açarı daxil edin','err'); return; }
+
+  const btn = document.getElementById('saveKeyBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Saxlanır...';
+
+  try {
+    // If setting active, deactivate others
+    if(active){
+      const batch = db.batch();
+      allKeys.filter(k=>k.isActive&&k.id!==editId).forEach(k=>{
+        batch.update(db.collection('api_keys').doc(k.id),{isActive:false});
+      });
+      await batch.commit();
+    }
+
+    const data = { name, key, service:svc, model, note, isActive:active,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+
+    if(editId){
+      await db.collection('api_keys').doc(editId).update(data);
+      logActivity('API açarı yeniləndi', name);
+    } else {
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('api_keys').add(data);
+      logActivity('API açarı əlavə edildi', name);
+    }
+    closeModal(); await loadKeys();
+    toast(editId?'✅ Açar yeniləndi':'✅ Açar əlavə edildi');
+  } catch(e){ toast('Xəta: '+e.message,'err'); }
+  btn.disabled=false; btn.textContent='💾 Saxla';
+}
+
+async function setActive(id){
+  try {
+    const batch = db.batch();
+    allKeys.forEach(k=>{ batch.update(db.collection('api_keys').doc(k.id),{isActive:k.id===id}); });
+    await batch.commit();
+    await loadKeys(); toast('✅ Aktiv açar dəyişdirildi');
+    logActivity('Aktiv API açarı dəyişdirildi');
+  } catch(e){ toast('Xəta: '+e.message,'err'); }
+}
+
+async function testKey(id, key, model, service){
+  toast('🔄 Test edilir...');
+  try {
+    const url = service==='openrouter' ? 'https://openrouter.ai/api/v1/chat/completions'
+      : service==='openai' ? 'https://api.openai.com/v1/chat/completions'
+      : 'https://openrouter.ai/api/v1/chat/completions';
+
+    const r = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key,'HTTP-Referer':window.location.href,'X-Title':'AzDerman Test'},
+      body: JSON.stringify({model, max_tokens:5, messages:[{role:'user',content:'Hi'}]})
+    });
+    const ok = r.ok;
+    await db.collection('api_keys').doc(id).update({ lastTested: firebase.firestore.FieldValue.serverTimestamp(), lastTestOk: ok });
+    await loadKeys();
+    if(ok){ toast('✅ API açarı işləyir!','ok'); logActivity('API testi uğurlu', model); }
+    else { const e=await r.json().catch(()=>({})); toast('❌ '+（e.error?.message||`HTTP ${r.status}`),'err'); }
+  } catch(e){ toast('❌ Bağlantı xətası','err'); }
+}
+
+async function deleteKey(id, name){
+  if(!confirm(`"${name}" açarını silmək istəyirsiniz?`)) return;
+  await db.collection('api_keys').doc(id).delete();
+  await loadKeys(); toast('🗑 Açar silindi');
+  logActivity('API açarı silindi', name);
+}
+
+updateModelList();
+requireAdmin((user,data)=>{ loadKeys(); });
+</script>
+</body>
+</html>

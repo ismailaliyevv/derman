@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin İstifadəçilər — AzDərman</title>
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-dot"></div><div class="logo-text">AzDərman</div><div class="logo-badge">ADMIN</div></div>
+  <div class="s-section">Əsas</div>
+  <a href="dashboard.html" class="s-link"><span class="s-icon">📊</span>Dashboard</a>
+  <a href="drugs.html"     class="s-link"><span class="s-icon">💊</span>Dərmanlar</a>
+  <a href="categories.html" class="s-link"><span class="s-icon">📂</span>Kateqoriyalar</a>
+  <div class="s-section">İstifadəçilər</div>
+  <a href="admins.html"   class="s-link active"><span class="s-icon">👤</span>Admin İstifadəçilər</a>
+  <a href="logs.html"     class="s-link"><span class="s-icon">📋</span>Fəaliyyət Jurnalı</a>
+  <div class="s-section">AI & İnteqrasiya</div>
+  <a href="ai-settings.html" class="s-link"><span class="s-icon">🤖</span>AI Parametrləri</a>
+  <a href="api-keys.html"    class="s-link"><span class="s-icon">🔑</span>API Açarları</a>
+  <div class="s-section">Analitika</div>
+  <a href="analytics.html"  class="s-link"><span class="s-icon">📈</span>Statistika</a>
+  <a href="prices.html"     class="s-link"><span class="s-icon">💰</span>Qiymət Analizi</a>
+  <div class="s-section">Sistem</div>
+  <a href="settings.html"   class="s-link"><span class="s-icon">⚙️</span>Sayt Parametrləri</a>
+  <a href="../index.html"   class="s-link" target="_blank"><span class="s-icon">🌐</span>Sayta Bax</a>
+  <div class="sidebar-user">
+    <div class="u-avatar" id="adminAvatar">A</div>
+    <div class="u-info"><div class="u-name" id="adminName">Admin</div><div class="u-email" id="adminEmail"></div></div>
+    <button class="btn-logout" onclick="adminLogout()">🚪</button>
+  </div>
+</aside>
+
+<div class="main-wrap">
+  <div class="topbar">
+    <div class="tb-left"><div><div class="page-title">👤 Admin İstifadəçilər</div><div class="page-sub">Admin rolunu idarə edin</div></div></div>
+    <div class="tb-right"><button class="btn btn-primary btn-sm" onclick="openAddModal()">+ Admin Əlavə Et</button></div>
+  </div>
+
+  <div class="content">
+    <div class="card">
+      <div class="card-head"><div class="card-title">Admin Siyahısı</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Ad</th><th>Email</th><th>Rol</th><th>Qeydiyyat</th><th>Son Giriş</th><th>Status</th><th>Əməliyyat</th></tr></thead>
+          <tbody id="adminsTb"><tr><td colspan="7"><div class="page-loading"><span class="spin-dark"></span></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">ℹ️ Admin əlavə etmə prosesi</div></div>
+      <div class="card-body">
+        <div style="font-size:.83rem;color:var(--ink2);line-height:1.9">
+          <div>1. İstifadəçi <strong>Firebase Authentication</strong>-da qeydiyyatdan keçməlidir</div>
+          <div>2. Buradan UID-ni daxil edib admin rolunu verin</div>
+          <div>3. İstifadəçi admin/login.html-dən daxil ola bilər</div>
+          <div style="margin-top:8px;padding:10px;background:var(--gold2);border-radius:8px;color:var(--gold)">
+            ⚠️ Yalnız etibarlı şəxslərə admin rolu verin. Admin bütün API açarlarına, parametrlərə çıxış əldə edir.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="adminModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="modalTitle">+ Yeni Admin</div><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div style="background:var(--accent3);border:1px solid var(--accent4);border-radius:9px;padding:10px 13px;margin-bottom:14px;font-size:.78rem;color:var(--accent)">
+        📌 Əvvəlcə Firebase Console → Authentication-da istifadəçi yaradın, sonra UID-ni buraya daxil edin.
+      </div>
+      <div class="fg"><label class="fl">Ad *</label><input class="fi" id="mName" placeholder="Ad Soyad"></div>
+      <div class="fg"><label class="fl">Email *</label><input class="fi" id="mEmail" type="email" placeholder="admin@email.com"></div>
+      <div class="fg"><label class="fl">Firebase UID *</label><input class="fi" id="mUid" placeholder="abc123..." style="font-family:monospace"></div>
+      <div class="fg">
+        <label class="fl">Rol</label>
+        <select class="fi" id="mRole">
+          <option value="admin">Admin (tam hüquq)</option>
+          <option value="editor">Redaktor (yalnız məzmun)</option>
+          <option value="viewer">Baxıcı (yalnız oxuma)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeModal()">Ləğv</button>
+      <button class="btn btn-primary" onclick="saveAdmin()">💾 Əlavə et</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+let allAdmins=[], editId=null;
+
+function openAddModal(){ editId=null; document.getElementById('modalTitle').textContent='+ Yeni Admin'; ['mName','mEmail','mUid'].forEach(id=>document.getElementById(id).value=''); document.getElementById('mRole').value='admin'; document.getElementById('adminModal').classList.add('open'); }
+function closeModal(){ document.getElementById('adminModal').classList.remove('open'); }
+
+async function loadAdmins(){
+  try {
+    const snap = await db.collection('admins').get();
+    allAdmins = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const tb = document.getElementById('adminsTb');
+    if(!allAdmins.length){ tb.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Admin yoxdur</div></div></td></tr>'; return; }
+    tb.innerHTML = allAdmins.map(a=>`<tr>
+      <td class="fw"><div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:50%;background:var(--accent3);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:var(--accent)">${(a.name||'A')[0]}</div>${a.name||'—'}</div></td>
+      <td>${a.email||'—'}</td>
+      <td><span class="badge ${a.role==='admin'?'badge-red':a.role==='editor'?'badge-gold':'badge-gray'}">${a.role==='admin'?'⚡ Admin':a.role==='editor'?'✏️ Redaktor':'👁 Baxıcı'}</span></td>
+      <td style="font-size:.73rem;color:var(--muted)">${fmtDate(a.createdAt)||'—'}</td>
+      <td style="font-size:.73rem;color:var(--muted)">${fmtDate(a.lastLogin)||'—'}</td>
+      <td><span class="badge badge-green">Aktiv</span></td>
+      <td><div style="display:flex;gap:5px">
+        <button class="btn btn-sm btn-secondary" onclick="editAdmin('${a.id}')">✏️</button>
+        ${a.id!==adminUser?.uid?`<button class="btn btn-sm btn-danger" onclick="removeAdmin('${a.id}','${a.name}')">🗑</button>`:'<span style="font-size:.72rem;color:var(--muted)">Özünüz</span>'}
+      </div></td>
+    </tr>`).join('');
+  } catch(e){ toast('Yükləmə xətası: '+e.message,'err'); }
+}
+
+function editAdmin(id){
+  const a=allAdmins.find(x=>x.id===id);if(!a)return;
+  editId=id;
+  document.getElementById('modalTitle').textContent='✏️ Admin Redaktəsi';
+  document.getElementById('mName').value=a.name||'';
+  document.getElementById('mEmail').value=a.email||'';
+  document.getElementById('mUid').value=a.id;
+  document.getElementById('mRole').value=a.role||'admin';
+  document.getElementById('adminModal').classList.add('open');
+}
+
+async function saveAdmin(){
+  const name=document.getElementById('mName').value.trim();
+  const email=document.getElementById('mEmail').value.trim();
+  const uid=document.getElementById('mUid').value.trim();
+  const role=document.getElementById('mRole').value;
+  if(!name||!email||!uid){toast('Bütün sahələri doldurun','err');return;}
+  try {
+    const data={name,email,role,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+    if(!editId) data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection('admins').doc(uid).set(data,{merge:true});
+    closeModal(); await loadAdmins();
+    toast(editId?'✅ Admin yeniləndi':'✅ Admin əlavə edildi');
+    logActivity(editId?'Admin yeniləndi':'Admin əlavə edildi', email);
+  } catch(e){toast('Xəta: '+e.message,'err');}
+}
+
+async function removeAdmin(id, name){
+  if(!confirm(`"${name}" adminlikdən çıxarmaq istəyirsiniz?`))return;
+  if(id===adminUser?.uid){toast('Özünüzü silə bilməzsiniz','err');return;}
+  await db.collection('admins').doc(id).delete();
+  await loadAdmins(); toast('🗑 Admin silindi');
+  logActivity('Admin silindi', name);
+}
+
+requireAdmin((u,d)=>{ loadAdmins(); });
+</script>
+</body>
+</html>

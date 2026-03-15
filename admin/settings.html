@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sayt Parametrləri — AzDərman Admin</title>
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-dot"></div><div class="logo-text">AzDərman</div><div class="logo-badge">ADMIN</div></div>
+  <div class="s-section">Əsas</div>
+  <a href="dashboard.html" class="s-link"><span class="s-icon">📊</span>Dashboard</a>
+  <a href="drugs.html"     class="s-link"><span class="s-icon">💊</span>Dərmanlar</a>
+  <a href="categories.html" class="s-link"><span class="s-icon">📂</span>Kateqoriyalar</a>
+  <div class="s-section">İstifadəçilər</div>
+  <a href="admins.html"   class="s-link"><span class="s-icon">👤</span>Admin İstifadəçilər</a>
+  <a href="logs.html"     class="s-link"><span class="s-icon">📋</span>Fəaliyyət Jurnalı</a>
+  <div class="s-section">AI & İnteqrasiya</div>
+  <a href="ai-settings.html" class="s-link"><span class="s-icon">🤖</span>AI Parametrləri</a>
+  <a href="api-keys.html"    class="s-link"><span class="s-icon">🔑</span>API Açarları</a>
+  <div class="s-section">Analitika</div>
+  <a href="analytics.html"  class="s-link"><span class="s-icon">📈</span>Statistika</a>
+  <a href="prices.html"     class="s-link"><span class="s-icon">💰</span>Qiymət Analizi</a>
+  <div class="s-section">Sistem</div>
+  <a href="settings.html"   class="s-link active"><span class="s-icon">⚙️</span>Sayt Parametrləri</a>
+  <a href="../index.html"   class="s-link" target="_blank"><span class="s-icon">🌐</span>Sayta Bax</a>
+  <div class="sidebar-user">
+    <div class="u-avatar" id="adminAvatar">A</div>
+    <div class="u-info"><div class="u-name" id="adminName">Admin</div><div class="u-email" id="adminEmail"></div></div>
+    <button class="btn-logout" onclick="adminLogout()">🚪</button>
+  </div>
+</aside>
+
+<div class="main-wrap">
+  <div class="topbar">
+    <div class="tb-left"><div><div class="page-title">⚙️ Sayt Parametrləri</div><div class="page-sub">Görünüş, cədvəl və ümumi tənzimləmələr</div></div></div>
+    <div class="tb-right"><button class="btn btn-primary btn-sm" onclick="saveAll()">💾 Hamısını Saxla</button></div>
+  </div>
+
+  <div class="content">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">🖥️ Cədvəl Parametrləri</div></div>
+        <div class="card-body">
+          <div class="fg"><label class="fl">Səhifə başına sıra sayı</label>
+            <select class="fi" id="s-perpage"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option></select></div>
+          <div class="fg"><label class="fl">Default sıralama</label>
+            <select class="fi" id="s-sort"><option value="name_asc">Ad A→Z</option><option value="price_asc">Qiymət ↑</option><option value="price_desc">Qiymət ↓</option><option value="date_desc">Tarix: Yeni</option></select></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">Qiymət sütunu</div></div><label class="tgl"><input type="checkbox" id="s-price" checked><div class="tgl-sl"></div></label></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">Kateqoriya sütunu</div></div><label class="tgl"><input type="checkbox" id="s-cat" checked><div class="tgl-sl"></div></label></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">AI düyməsi</div><div class="toggle-sub">Hər sırada "💊 AI" düyməsi</div></div><label class="tgl"><input type="checkbox" id="s-ai" checked><div class="tgl-sl"></div></label></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">🎨 Görünüş</div></div>
+        <div class="card-body">
+          <div class="toggle-row"><div><div class="toggle-lbl">Kateqoriya grid</div><div class="toggle-sub">Ana səhifədə kateqoriya düymələri</div></div><label class="tgl"><input type="checkbox" id="s-catgrid" checked><div class="tgl-sl"></div></label></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">Hero statistika</div><div class="toggle-sub">13.773 / 17 kateqoriya / 78 ölkə</div></div><label class="tgl"><input type="checkbox" id="s-hero-stats" checked><div class="tgl-sl"></div></label></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">Axtarış sütunu</div><div class="toggle-sub">Sol sidebar axtarış</div></div><label class="tgl"><input type="checkbox" id="s-sidebar" checked><div class="tgl-sl"></div></label></div>
+          <div class="fg" style="margin-top:12px"><label class="fl">Sayt Başlığı</label><input class="fi" id="s-site-title" value="AzDərman Reyestri"></div>
+          <div class="fg"><label class="fl">Alt Başlıq</label><input class="fi" id="s-site-sub" value="Dövlət Qeydiyyatlı Dərman Vasitələri"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">📢 Elan & Bildiriş</div></div>
+      <div class="card-body">
+        <div class="toggle-row">
+          <div><div class="toggle-lbl">Xəbərdarlıq Paneli</div><div class="toggle-sub">Saytın üstündə tibbi xəbərdarlıq mesajı</div></div>
+          <label class="tgl"><input type="checkbox" id="s-warning-bar" checked><div class="tgl-sl"></div></label>
+        </div>
+        <div class="fg" style="margin-top:10px"><label class="fl">Xəbərdarlıq Mətni</label>
+          <textarea class="fi" id="s-warning-text" rows="2">⚕️ Bu məlumatlar yalnız tanışlıq məqsədi daşıyır. Hər hansı dərmanı həkimin tövsiyəsi olmadan qəbul etməyin.</textarea></div>
+        <div class="toggle-row" style="margin-top:8px">
+          <div><div class="toggle-lbl">Texniki İşlər Rejimi</div><div class="toggle-sub">Saytı müvəqqəti bağla (yalnız adminlər görür)</div></div>
+          <label class="tgl"><input type="checkbox" id="s-maintenance"><div class="tgl-sl"></div></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">🔒 Firestore Security Rules</div></div>
+      <div class="card-body">
+        <div style="background:var(--ink);color:#a8ff78;font-family:monospace;font-size:.75rem;padding:16px;border-radius:10px;line-height:1.8;overflow-x:auto">
+<pre>rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Admins koleksiyonu - yalnız özü oxuya bilər
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if isAdmin();
+    }
+
+    // API Açarları - yalnız adminlər
+    match /api_keys/{doc} {
+      allow read, write: if isAdmin();
+    }
+
+    // Parametrlər - yalnız adminlər yaza bilər, hamı oxuya
+    match /settings/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // AI logları - hamı yaza bilər (sorğular üçün), admin oxuya
+    match /ai_logs/{doc} {
+      allow create: if true;
+      allow read: if isAdmin();
+    }
+
+    // Admin logları - yalnız adminlər
+    match /admin_logs/{doc} {
+      allow read, write: if isAdmin();
+    }
+
+    function isAdmin() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}</pre>
+        </div>
+        <div class="form-hint" style="margin-top:8px">Bu qaydaları Firebase Console → Firestore → Rules-a yapışdırın</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+async function loadSettings(){
+  try {
+    const snap = await db.collection('settings').doc('site').get();
+    const s = snap.exists ? snap.data() : {};
+    document.getElementById('s-perpage').value = s.perPage||50;
+    document.getElementById('s-sort').value = s.sort||'name_asc';
+    document.getElementById('s-price').checked = s.showPrice!==false;
+    document.getElementById('s-cat').checked = s.showCat!==false;
+    document.getElementById('s-ai').checked = s.showAi!==false;
+    document.getElementById('s-catgrid').checked = s.showCatGrid!==false;
+    document.getElementById('s-hero-stats').checked = s.showHeroStats!==false;
+    document.getElementById('s-sidebar').checked = s.showSidebar!==false;
+    document.getElementById('s-site-title').value = s.siteTitle||'AzDərman Reyestri';
+    document.getElementById('s-site-sub').value = s.siteSub||'Dövlət Qeydiyyatlı Dərman Vasitələri';
+    document.getElementById('s-warning-bar').checked = s.showWarning!==false;
+    document.getElementById('s-warning-text').value = s.warningText||'⚕️ Bu məlumatlar yalnız tanışlıq məqsədi daşıyır.';
+    document.getElementById('s-maintenance').checked = s.maintenance||false;
+  } catch(e) {}
+}
+
+async function saveAll(){
+  try {
+    await db.collection('settings').doc('site').set({
+      perPage: parseInt(document.getElementById('s-perpage').value)||50,
+      sort: document.getElementById('s-sort').value,
+      showPrice: document.getElementById('s-price').checked,
+      showCat: document.getElementById('s-cat').checked,
+      showAi: document.getElementById('s-ai').checked,
+      showCatGrid: document.getElementById('s-catgrid').checked,
+      showHeroStats: document.getElementById('s-hero-stats').checked,
+      showSidebar: document.getElementById('s-sidebar').checked,
+      siteTitle: document.getElementById('s-site-title').value,
+      siteSub: document.getElementById('s-site-sub').value,
+      showWarning: document.getElementById('s-warning-bar').checked,
+      warningText: document.getElementById('s-warning-text').value,
+      maintenance: document.getElementById('s-maintenance').checked,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast('✅ Parametrlər saxlanıldı');
+    logActivity('Sayt parametrləri yeniləndi');
+  } catch(e){ toast('Xəta: '+e.message,'err'); }
+}
+
+requireAdmin((u,d)=>{ loadSettings(); });
+</script>
+</body>
+</html>

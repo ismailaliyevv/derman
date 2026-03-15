@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fəaliyyət Jurnalı — AzDərman Admin</title>
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-dot"></div><div class="logo-text">AzDərman</div><div class="logo-badge">ADMIN</div></div>
+  <div class="s-section">Əsas</div>
+  <a href="dashboard.html" class="s-link"><span class="s-icon">📊</span>Dashboard</a>
+  <a href="drugs.html"     class="s-link"><span class="s-icon">💊</span>Dərmanlar</a>
+  <a href="categories.html" class="s-link"><span class="s-icon">📂</span>Kateqoriyalar</a>
+  <div class="s-section">İstifadəçilər</div>
+  <a href="admins.html"   class="s-link"><span class="s-icon">👤</span>Admin İstifadəçilər</a>
+  <a href="logs.html"     class="s-link active"><span class="s-icon">📋</span>Fəaliyyət Jurnalı</a>
+  <div class="s-section">AI & İnteqrasiya</div>
+  <a href="ai-settings.html" class="s-link"><span class="s-icon">🤖</span>AI Parametrləri</a>
+  <a href="api-keys.html"    class="s-link"><span class="s-icon">🔑</span>API Açarları</a>
+  <div class="s-section">Analitika</div>
+  <a href="analytics.html"  class="s-link"><span class="s-icon">📈</span>Statistika</a>
+  <a href="prices.html"     class="s-link"><span class="s-icon">💰</span>Qiymət Analizi</a>
+  <div class="s-section">Sistem</div>
+  <a href="settings.html"   class="s-link"><span class="s-icon">⚙️</span>Sayt Parametrləri</a>
+  <a href="../index.html"   class="s-link" target="_blank"><span class="s-icon">🌐</span>Sayta Bax</a>
+  <div class="sidebar-user">
+    <div class="u-avatar" id="adminAvatar">A</div>
+    <div class="u-info"><div class="u-name" id="adminName">Admin</div><div class="u-email" id="adminEmail"></div></div>
+    <button class="btn-logout" onclick="adminLogout()">🚪</button>
+  </div>
+</aside>
+
+<div class="main-wrap">
+  <div class="topbar">
+    <div class="tb-left"><div><div class="page-title">📋 Fəaliyyət Jurnalı</div><div class="page-sub">Bütün admin hərəkətləri</div></div></div>
+    <div class="tb-right">
+      <button class="btn btn-danger btn-sm" onclick="clearLogs()">🗑 Təmizlə</button>
+      <button class="btn btn-secondary btn-sm" onclick="loadLogs()">🔄 Yenilə</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Jurnal</div>
+        <div class="search-wrap" style="width:220px"><span class="search-icon">⌕</span><input class="search-in" placeholder="Axtar..." oninput="filterLogs(this.value)"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Admin</th><th>Hərəkət</th><th>Detal</th><th>Tarix</th></tr></thead>
+          <tbody id="logsTb"><tr><td colspan="4"><div class="page-loading"><span class="spin-dark"></span></div></td></tr></tbody>
+        </table>
+      </div>
+      <div id="logPagination" style="padding:12px;text-align:center;border-top:1px solid var(--border)"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+let allLogs=[], lastDoc=null;
+
+async function loadLogs(){
+  try {
+    const snap = await db.collection('admin_logs').orderBy('timestamp','desc').limit(100).get();
+    allLogs = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(snap.docs.length) lastDoc = snap.docs[snap.docs.length-1];
+    renderLogs(allLogs);
+  } catch(e){ document.getElementById('logsTb').innerHTML=`<tr><td colspan="4"><div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">${e.message}</div></div></td></tr>`; }
+}
+
+function renderLogs(logs){
+  if(!logs.length){ document.getElementById('logsTb').innerHTML='<tr><td colspan="4"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Jurnal boşdur</div></div></td></tr>'; return; }
+  document.getElementById('logsTb').innerHTML = logs.map(l=>`<tr>
+    <td><div style="display:flex;align-items:center;gap:7px"><div style="width:26px;height:26px;border-radius:50%;background:var(--accent3);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;color:var(--accent)">${(l.name||'A')[0]}</div><span style="font-size:.8rem;font-weight:600">${l.name||'Admin'}</span></div></td>
+    <td class="fw" style="font-size:.82rem">${l.action||'—'}</td>
+    <td style="font-size:.75rem;color:var(--muted)">${l.detail||'—'}</td>
+    <td style="font-size:.73rem;color:var(--muted);white-space:nowrap">${fmtDate(l.timestamp)||'—'}</td>
+  </tr>`).join('');
+}
+
+function filterLogs(q){ if(!q){renderLogs(allLogs);return;} renderLogs(allLogs.filter(l=>(l.action+l.name+l.detail+'').toLowerCase().includes(q.toLowerCase()))); }
+
+async function clearLogs(){
+  if(!confirm('Bütün jurnal qeydlərini silmək istəyirsiniz?'))return;
+  const batch=db.batch();
+  allLogs.forEach(l=>batch.delete(db.collection('admin_logs').doc(l.id)));
+  await batch.commit(); await loadLogs(); toast('🗑 Jurnal təmizləndi');
+}
+
+requireAdmin((u,d)=>{ loadLogs(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Parametrləri — AzDərman Admin</title>
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-dot"></div><div class="logo-text">AzDərman</div><div class="logo-badge">ADMIN</div></div>
+  <div class="s-section">Əsas</div>
+  <a href="dashboard.html" class="s-link"><span class="s-icon">📊</span>Dashboard</a>
+  <a href="drugs.html"     class="s-link"><span class="s-icon">💊</span>Dərmanlar</a>
+  <a href="categories.html" class="s-link"><span class="s-icon">📂</span>Kateqoriyalar</a>
+  <div class="s-section">İstifadəçilər</div>
+  <a href="admins.html"   class="s-link"><span class="s-icon">👤</span>Admin İstifadəçilər</a>
+  <a href="logs.html"     class="s-link"><span class="s-icon">📋</span>Fəaliyyət Jurnalı</a>
+  <div class="s-section">AI & İnteqrasiya</div>
+  <a href="ai-settings.html" class="s-link active"><span class="s-icon">🤖</span>AI Parametrləri</a>
+  <a href="api-keys.html"    class="s-link"><span class="s-icon">🔑</span>API Açarları</a>
+  <div class="s-section">Analitika</div>
+  <a href="analytics.html"  class="s-link"><span class="s-icon">📈</span>Statistika</a>
+  <a href="prices.html"     class="s-link"><span class="s-icon">💰</span>Qiymət Analizi</a>
+  <div class="s-section">Sistem</div>
+  <a href="settings.html"   class="s-link"><span class="s-icon">⚙️</span>Sayt Parametrləri</a>
+  <a href="../index.html"   class="s-link" target="_blank"><span class="s-icon">🌐</span>Sayta Bax</a>
+  <div class="sidebar-user">
+    <div class="u-avatar" id="adminAvatar">A</div>
+    <div class="u-info"><div class="u-name" id="adminName">Admin</div><div class="u-email" id="adminEmail"></div></div>
+    <button class="btn-logout" onclick="adminLogout()">🚪</button>
+  </div>
+</aside>
+
+<div class="main-wrap">
+  <div class="topbar">
+    <div class="tb-left"><div><div class="page-title">🤖 AI Parametrləri</div><div class="page-sub">AI cavablarını fərdiləşdirin</div></div></div>
+    <div class="tb-right"><button class="btn btn-primary btn-sm" onclick="saveAll()">💾 Hamısını Saxla</button></div>
+  </div>
+
+  <div class="content">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <!-- AI ON/OFF -->
+      <div class="card">
+        <div class="card-head"><div class="card-title">⚡ Ümumi Parametrlər</div></div>
+        <div class="card-body" id="generalSettings">
+          <div class="toggle-row">
+            <div><div class="toggle-lbl">AI Funksiyası</div><div class="toggle-sub">Dərman məlumatları üçün AI aktiv</div></div>
+            <label class="tgl"><input type="checkbox" id="cfg-ai-enabled" checked><div class="tgl-sl"></div></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="toggle-lbl">Cache</div><div class="toggle-sub">Eyni sorğu yenidən API-yə göndərilməsin</div></div>
+            <label class="tgl"><input type="checkbox" id="cfg-cache" checked><div class="tgl-sl"></div></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="toggle-lbl">Tibbi Xəbərdarlıq</div><div class="toggle-sub">Cavabların altında "həkimə müraciət" qeydi</div></div>
+            <label class="tgl"><input type="checkbox" id="cfg-disclaimer" checked><div class="tgl-sl"></div></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="toggle-lbl">AI Logları</div><div class="toggle-sub">Hər sorğu Firestore-da qeyd edilsin</div></div>
+            <label class="tgl"><input type="checkbox" id="cfg-logs" checked><div class="tgl-sl"></div></label>
+          </div>
+          <div class="fg" style="margin-top:14px">
+            <label class="fl">Max Token Sayı</label>
+            <input class="fi" id="cfg-max-tokens" type="number" value="1000" min="200" max="4000">
+            <div class="form-hint">Hər AI cavabı üçün maksimum token. Az = sürətli+ucuz, çox = ətraflı</div>
+          </div>
+          <div class="fg">
+            <label class="fl">Temperature (0–1)</label>
+            <input class="fi" id="cfg-temperature" type="number" value="0.3" min="0" max="1" step="0.1">
+            <div class="form-hint">0 = dəqiq/sabit, 1 = yaradıcı/dəyişkən. 0.3 tövsiyə edilir.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESPONSE LANGUAGE -->
+      <div class="card">
+        <div class="card-head"><div class="card-title">🌐 Dil & Format</div></div>
+        <div class="card-body">
+          <div class="fg">
+            <label class="fl">Cavab Dili</label>
+            <select class="fi" id="cfg-lang">
+              <option value="az">Azərbaycan dili</option>
+              <option value="ru">Rus dili</option>
+              <option value="en">İngilis dili</option>
+              <option value="tr">Türk dili</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Cavab Üslubu</label>
+            <select class="fi" id="cfg-style">
+              <option value="simple">Sadə (xəstə üçün)</option>
+              <option value="medical">Tibbi (mütəxəssis üçün)</option>
+              <option value="brief">Qısa (əsas məlumat)</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="fl">Göstəriləcək Bölmələr</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px" id="sectionToggles">
+              <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer"><input type="checkbox" checked value="nedir"> Dərman nədir</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer"><input type="checkbox" checked value="ne_ucun"> Nə üçün</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer"><input type="checkbox" checked value="qaydasi"> İstifadə qaydası</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer"><input type="checkbox" checked value="xeberdarliq"> Xəbərdarlıq</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer"><input type="checkbox" checked value="yan"> Yan təsirlər</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer"><input type="checkbox" checked value="eks"> Əks göstərişlər</label>
+              <label style="display:flex;align-items:center;gap:4px;font-size:.8rem;cursor:pointer"><input type="checkbox" checked value="saxlanma"> Saxlama</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROMPT EDITOR -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">📝 Sistem Promptu</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" onclick="resetPrompt()">↩ Sıfırla</button>
+          <button class="btn btn-primary btn-sm" onclick="savePrompt()">💾 Saxla</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="background:var(--accent3);border:1px solid var(--accent4);border-radius:9px;padding:10px 13px;margin-bottom:12px;font-size:.78rem;color:var(--accent);line-height:1.6">
+          <strong>Dəyişənlər:</strong> <code>{trade}</code> = ticarət adı, <code>{inn}</code> = INN, <code>{dose}</code> = doza, <code>{form}</code> = forma, <code>{maker}</code> = istehsalçı
+        </div>
+        <textarea class="fi" id="cfg-prompt" rows="12" style="font-family:monospace;font-size:.82rem"></textarea>
+        <div class="form-hint">Bu prompt hər AI sorğusunda göndərilir. JSON formatı saxlanmalıdır.</div>
+      </div>
+    </div>
+
+    <!-- PROMPT TEST -->
+    <div class="card">
+      <div class="card-head"><div class="card-title">🧪 Promptu Test Et</div></div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="fg"><label class="fl">Ticarət Adı</label><input class="fi" id="test-trade" value="Augmentin 875 mq"></div>
+          <div class="fg"><label class="fl">INN</label><input class="fi" id="test-inn" value="AMOXICILLIN + CLAVULANATE"></div>
+          <div class="fg"><label class="fl">Doza</label><input class="fi" id="test-dose" value="875/125 mq"></div>
+          <div class="fg"><label class="fl">Forma</label><input class="fi" id="test-form" value="Tablet"></div>
+        </div>
+        <button class="btn btn-primary" onclick="testPrompt()">▶ Test Et</button>
+        <div id="testResult" style="margin-top:14px;display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+const DEFAULT_PROMPT = `Sen tibb mutexessisisen. Asagidaki derman haqqinda Azerbaycan dilinde etrafli melumat ver.
+
+Derman: {trade}
+Beynelxalq ad (INN): {inn}
+Doza: {dose}
+Forma: {form}
+Istehsalci: {maker}
+
+Yalniz durust JSON formatinda cavab ver, baska hec ne yazma:
+{
+  "nedir": "Dermanin qisa izahi 2-3 cumle",
+  "ne_ucun": ["gosteris 1","gosteris 2","gosteris 3","gosteris 4","gosteris 5"],
+  "istifade_qaydasi": "Nece ve ne zaman istifade olunur, doz, vax, yemekle yemeksiz",
+  "yan_tesirler": ["yan tesir 1","yan tesir 2","yan tesir 3","yan tesir 4"],
+  "eks_gostericiler": ["eks gosteris 1","eks gosteris 2","eks gosteris 3"],
+  "xeberdarliq": "Vacib xeberdarliq: hamileylik, suruculuk, alkoqul ve s",
+  "saxlanma": "Saxlama seraiti: temperatur, rutubet, isiq",
+  "resept": "reseptli"
+}`;
+
+async function loadSettings(){
+  try {
+    const snap = await db.collection('settings').doc('ai').get();
+    const s = snap.exists ? snap.data() : {};
+    document.getElementById('cfg-ai-enabled').checked = s.enabled !== false;
+    document.getElementById('cfg-cache').checked = s.cache !== false;
+    document.getElementById('cfg-disclaimer').checked = s.disclaimer !== false;
+    document.getElementById('cfg-logs').checked = s.logs !== false;
+    document.getElementById('cfg-max-tokens').value = s.maxTokens || 1000;
+    document.getElementById('cfg-temperature').value = s.temperature || 0.3;
+    document.getElementById('cfg-lang').value = s.lang || 'az';
+    document.getElementById('cfg-style').value = s.style || 'simple';
+    document.getElementById('cfg-prompt').value = s.prompt || DEFAULT_PROMPT;
+  } catch(e){
+    document.getElementById('cfg-prompt').value = DEFAULT_PROMPT;
+  }
+}
+
+async function saveAll(){
+  await saveSettings();
+  await savePrompt();
+  logActivity('AI parametrləri yeniləndi');
+}
+
+async function saveSettings(){
+  try {
+    await db.collection('settings').doc('ai').set({
+      enabled: document.getElementById('cfg-ai-enabled').checked,
+      cache:   document.getElementById('cfg-cache').checked,
+      disclaimer: document.getElementById('cfg-disclaimer').checked,
+      logs:    document.getElementById('cfg-logs').checked,
+      maxTokens: parseInt(document.getElementById('cfg-max-tokens').value)||1000,
+      temperature: parseFloat(document.getElementById('cfg-temperature').value)||0.3,
+      lang:  document.getElementById('cfg-lang').value,
+      style: document.getElementById('cfg-style').value,
+    }, {merge:true});
+    toast('✅ Parametrlər saxlanıldı');
+  } catch(e){ toast('Xəta: '+e.message,'err'); }
+}
+
+async function savePrompt(){
+  try {
+    await db.collection('settings').doc('ai').set({ prompt: document.getElementById('cfg-prompt').value }, {merge:true});
+    toast('✅ Prompt saxlanıldı');
+  } catch(e){ toast('Xəta: '+e.message,'err'); }
+}
+
+function resetPrompt(){ document.getElementById('cfg-prompt').value = DEFAULT_PROMPT; toast('↩ Standart prompt bərpa edildi'); }
+
+async function testPrompt(){
+  const res = document.getElementById('testResult');
+  res.style.display='block';
+  res.innerHTML='<div class="page-loading"><span class="spin-dark"></span><p>Test edilir...</p></div>';
+
+  // Get active key from Firestore
+  let apiKey='', model='anthropic/claude-haiku-4.5', service='openrouter';
+  try {
+    const ks = await db.collection('api_keys').where('isActive','==',true).limit(1).get();
+    if(!ks.empty){ const k=ks.docs[0].data(); apiKey=k.key; model=k.model; service=k.service; }
+  } catch(e){}
+
+  if(!apiKey){ res.innerHTML='<div style="color:var(--red);font-size:.84rem;padding:12px;background:var(--red2);border-radius:8px">❌ Aktiv API açarı tapılmadı. Əvvəlcə API açarı əlavə edin.</div>'; return; }
+
+  const promptTpl = document.getElementById('cfg-prompt').value;
+  const prompt = promptTpl
+    .replace('{trade}', document.getElementById('test-trade').value)
+    .replace('{inn}',   document.getElementById('test-inn').value)
+    .replace('{dose}',  document.getElementById('test-dose').value)
+    .replace('{form}',  document.getElementById('test-form').value)
+    .replace('{maker}', 'Test istehsalçı');
+
+  try {
+    const r = await fetch('https://openrouter.ai/api/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey,'HTTP-Referer':window.location.href,'X-Title':'AzDerman Test'},
+      body: JSON.stringify({model, max_tokens:parseInt(document.getElementById('cfg-max-tokens').value)||1000, temperature:parseFloat(document.getElementById('cfg-temperature').value)||0.3, messages:[{role:'user',content:prompt}]})
+    });
+    if(!r.ok){ const e=await r.json().catch(()=>({})); throw new Error(e.error?.message||`HTTP ${r.status}`); }
+    const data = await r.json();
+    const raw = data.choices?.[0]?.message?.content||'';
+    res.innerHTML=`<div style="background:var(--green2);border:1.5px solid var(--green3);border-radius:9px;padding:14px">
+      <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:8px">✅ Uğurlu cavab — ${model}</div>
+      <pre style="font-family:monospace;font-size:.76rem;color:var(--ink2);white-space:pre-wrap;word-break:break-all">${raw.substring(0,1200)}${raw.length>1200?'…':''}</pre>
+    </div>`;
+  } catch(e){
+    res.innerHTML=`<div style="background:var(--red2);border:1.5px solid var(--red3);border-radius:9px;padding:12px;font-size:.83rem;color:var(--red)">❌ ${e.message}</div>`;
+  }
+}
+
+requireAdmin((u,d)=>{ loadSettings(); });
+</script>
+</body>
+</html>
