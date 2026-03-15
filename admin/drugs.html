@@ -5,6 +5,46 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dərmanlar — AzDərman Admin</title>
 <link rel="stylesheet" href="../css/admin.css">
+<style>
+/* ── VIEW TOGGLE ── */
+.view-toggle{display:flex;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;padding:3px;gap:3px;}
+.vt-btn{padding:5px 14px;border-radius:7px;border:none;background:none;font-family:'Inter',sans-serif;font-size:.76rem;font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s;}
+.vt-btn.active{background:var(--surface);color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+
+/* ── GROUP ROW ── */
+.group-toggle-row{cursor:pointer;}
+.group-toggle-row:hover{background:var(--accent3)!important;}
+.group-toggle-row td:first-child{padding-left:6px;}
+.expand-icon{display:inline-block;transition:transform .2s;font-size:.7rem;margin-right:4px;color:var(--muted);}
+.expanded .expand-icon{transform:rotate(90deg);}
+.child-row td{background:#fafbfd;font-size:.77rem;border-bottom:1px solid #f0f2f5!important;}
+.child-row:hover td{background:var(--accent3)!important;}
+.child-row td{padding:7px 12px;}
+
+/* ── APTEKONLINE PRICE ── */
+.apt-price{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;}
+.apt-price .price-val{font-weight:800;color:#0f7b4d;}
+.apt-price .price-src{font-size:.65rem;color:var(--muted);background:var(--green2);padding:1px 5px;border-radius:4px;border:1px solid var(--green3);}
+.apt-loading{color:var(--muted);font-size:.72rem;display:inline-flex;align-items:center;gap:4px;}
+.apt-error{color:var(--red);font-size:.72rem;}
+.apt-na{color:var(--muted);font-size:.72rem;}
+.fetch-btn{background:var(--green2);border:1px solid var(--green3);color:var(--green);padding:3px 8px;border-radius:6px;font-size:.68rem;font-weight:700;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;}
+.fetch-btn:hover{background:var(--green);color:#fff;}
+
+/* ── BADGE COUNT ── */
+.cnt-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:.6rem;font-weight:800;margin-left:4px;flex-shrink:0;}
+
+/* ── PAGINATION ── */
+.pagination{display:flex;align-items:center;justify-content:center;gap:4px;padding:14px;flex-wrap:wrap;}
+.page-btn{min-width:32px;height:32px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface);color:var(--ink2);font-size:.78rem;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif;padding:0 8px;}
+.page-btn:hover{border-color:var(--accent);color:var(--accent);}
+.page-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.page-btn:disabled{opacity:.35;cursor:default;}
+.page-info{font-size:.75rem;color:var(--muted);margin:0 4px;}
+
+/* ── INLINE PRICE FETCH ── */
+.price-cell{min-width:110px;}
+</style>
 </head>
 <body>
 <aside class="sidebar">
@@ -41,7 +81,11 @@
       </div>
     </div>
     <div class="tb-right">
-      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇️ CSV Export</button>
+      <div class="view-toggle">
+        <button class="vt-btn active" id="vt-grouped" onclick="setView('grouped')">📦 Qruplu (INN)</button>
+        <button class="vt-btn" id="vt-flat" onclick="setView('flat')">📋 Hamısı</button>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇️ CSV</button>
     </div>
   </div>
 
@@ -68,16 +112,12 @@
             <div style="font-size:.63rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Forma</div>
             <select class="fi" id="filterForm" onchange="onFilter()" style="padding:8px 10px;font-size:.82rem">
               <option value="">Hamısı</option>
-              <option>Tablet</option>
-              <option>Kapsul</option>
+              <option>Tablet</option><option>Kapsul</option>
               <option>İnyeksiya üçün məhlul</option>
               <option>İnfuziya üçün məhlul</option>
-              <option>Damcı</option>
-              <option>Krem</option>
-              <option>Gel</option>
-              <option>Məlhəm</option>
-              <option>Şərbət</option>
-              <option>Sprey</option>
+              <option>Damcı</option><option>Krem</option>
+              <option>Gel</option><option>Məlhəm</option>
+              <option>Şərbət</option><option>Sprey</option>
             </select>
           </div>
           <div>
@@ -96,6 +136,7 @@
             <select class="fi" id="drugSort" onchange="onFilter()" style="padding:8px 10px;font-size:.82rem">
               <option value="name_asc">Ad A→Z</option>
               <option value="name_desc">Ad Z→A</option>
+              <option value="count_desc">Say ↓</option>
               <option value="price_asc">Qiymət ↑</option>
               <option value="price_desc">Qiymət ↓</option>
             </select>
@@ -122,24 +163,36 @@
         </div>
       </div>
       <div class="table-wrap">
-        <table>
+        <!-- GROUPED VIEW -->
+        <table id="groupedTable" style="display:none">
           <thead>
             <tr>
               <th>#</th>
-              <th>Ticarət Adı</th>
+              <th>Ticarət Adı (Klikləyin)</th>
               <th>INN</th>
-              <th>Doza</th>
               <th>Forma</th>
-              <th>Qablaşdırma</th>
               <th>Kateqoriya</th>
-              <th>Ölkə / İstehsalçı</th>
-              <th>Topdansatış</th>
-              <th>Pərakəndə</th>
-              <th>Tarix</th>
+              <th>Say</th>
+              <th>Qiymət aralığı</th>
+              <th class="price-cell">aptekonline.az qiyməti</th>
             </tr>
           </thead>
-          <tbody id="drugsTb">
-            <tr><td colspan="11"><div class="page-loading"><span class="spin-dark" style="width:28px;height:28px;border-width:3px;display:block;"></span><p>13,773 dərman yüklənir...</p></div></td></tr>
+          <tbody id="groupedTb">
+            <tr><td colspan="8"><div class="page-loading"><span class="spin-dark" style="width:28px;height:28px;border-width:3px;display:block;"></span><p>Yüklənir...</p></div></td></tr>
+          </tbody>
+        </table>
+        <!-- FLAT VIEW -->
+        <table id="flatTable" style="display:none">
+          <thead>
+            <tr>
+              <th>#</th><th>Ticarət Adı</th><th>INN</th><th>Doza</th>
+              <th>Forma</th><th>Kateqoriya</th><th>Ölkə / İstehsalçı</th>
+              <th>Topdansatış</th><th>Pərakəndə</th>
+              <th class="price-cell">aptekonline.az</th>
+            </tr>
+          </thead>
+          <tbody id="flatTb">
+            <tr><td colspan="10"><div class="page-loading"><span class="spin-dark" style="width:28px;height:28px;border-width:3px;display:block;"></span></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -149,9 +202,9 @@
   </div>
 </div>
 
-<!-- DRUG DETAIL MODAL -->
+<!-- DETAIL MODAL -->
 <div class="modal-overlay" id="drugModal" onclick="if(event.target===this)closeModal()">
-  <div class="modal" style="max-width:680px">
+  <div class="modal" style="max-width:700px">
     <div class="modal-head">
       <div class="modal-title" id="dModalTitle">Dərman Məlumatı</div>
       <button class="modal-close" onclick="closeModal()">✕</button>
@@ -167,8 +220,9 @@
 <script src="../js/firebase-config.js"></script>
 <script src="../js/admin-auth.js"></script>
 <script>
-// Load drugs data from parent index.html's embedded data via fetch
-// Since we can't import 2.3MB directly, we load it dynamically
+// ─────────────────────────────────────
+//  CONSTANTS
+// ─────────────────────────────────────
 const CATS=[
   {n:"Ağrı kəsicilər",i:"💊",c:"#e53e3e"},{n:"Antibiotiklər",i:"🦠",c:"#2b6cb0"},
   {n:"Ürək-damar",i:"❤️",c:"#c0392b"},{n:"Mədə-bağırsaq",i:"🫁",c:"#2d6a4f"},
@@ -181,15 +235,144 @@ const CATS=[
   {n:"Digər",i:"📦",c:"#718096"}
 ];
 const FORM_ICONS={'Tablet':'💊','Kapsul':'💊','İnyeksiya üçün məhlul':'💉','İnfuziya üçün məhlul':'🩺','Damcı':'💧','Məhlul':'🧪','Şərbət':'🍶','Krem':'🧴','Gel':'🧴','Məlhəm':'🧴','Sprey':'💨'};
-function fi(f){for(const k in FORM_ICONS)if(f&&f.startsWith(k))return FORM_ICONS[k];return '💊';}
+
+function fi(f){for(const k in FORM_ICONS)if(f&&f.startsWith(k))return FORM_ICONS[k];return'💊';}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-let RAW=[], filtered=[], curPage=1, PER_PAGE=50;
+// ─────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────
+let RAW=[], filtered=[], groups=[], curPage=1, PER_PAGE=50;
+let viewMode='grouped'; // 'grouped' | 'flat'
+const aptCache={}; // drugName -> { price, url } or null
 
-// Populate cat filter
+// ─────────────────────────────────────
+//  APTEKONLINE.AZ PRICE FETCH
+//  Uses their public search API endpoint
+// ─────────────────────────────────────
+async function fetchAptPrice(drugName, cellId) {
+  const cell = document.getElementById(cellId);
+  if(!cell) return;
+
+  // Check cache
+  const cacheKey = drugName.toLowerCase().trim();
+  if(aptCache[cacheKey] !== undefined) {
+    renderAptPrice(cell, aptCache[cacheKey]);
+    return;
+  }
+
+  cell.innerHTML = `<span class="apt-loading"><span class="spin spin-dark" style="width:10px;height:10px;border-width:1.5px"></span> yüklənir</span>`;
+
+  try {
+    // aptekonline.az uses Angular + REST API
+    // Their search endpoint (discovered from network traffic)
+    const query = encodeURIComponent(drugName.split(' ')[0]); // First word for better results
+    const url = `https://aptekonline.az/api/products?search=${query}&limit=5`;
+
+    const r = await fetch(url, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      mode: 'cors'
+    });
+
+    if(r.ok) {
+      const data = await r.json();
+      const products = data.data || data.products || data.items || data || [];
+      if(Array.isArray(products) && products.length > 0) {
+        // Find best match
+        const match = products.find(p => {
+          const pName = (p.name || p.title || p.product_name || '').toLowerCase();
+          return pName.includes(drugName.toLowerCase().split(' ')[0].toLowerCase());
+        }) || products[0];
+
+        const price = match.price || match.retail_price || match.cost || null;
+        const result = price ? { price: parseFloat(price).toFixed(2), url: `https://aptekonline.az/product/${match.id||match.slug||''}` } : null;
+        aptCache[cacheKey] = result;
+        renderAptPrice(cell, result);
+        return;
+      }
+    }
+
+    // Fallback: try scraping search page
+    const searchUrl = `https://aptekonline.az/search?q=${query}`;
+    const r2 = await fetch(searchUrl, { mode: 'cors' });
+    if(r2.ok) {
+      const html = await r2.text();
+      // Parse price from Angular template data
+      const m = html.match(/price["\s:]+(\d+\.?\d*)/i);
+      if(m) {
+        const result = { price: parseFloat(m[1]).toFixed(2), url: searchUrl };
+        aptCache[cacheKey] = result;
+        renderAptPrice(cell, result);
+        return;
+      }
+    }
+
+    aptCache[cacheKey] = null;
+    renderAptPrice(cell, null);
+  } catch(e) {
+    // CORS blocked - show manual link instead
+    aptCache[cacheKey] = 'cors';
+    cell.innerHTML = `<a href="https://aptekonline.az/search?q=${encodeURIComponent(drugName.split(' ')[0])}" target="_blank" class="fetch-btn">🔍 Axtar</a>`;
+  }
+}
+
+function renderAptPrice(cell, result) {
+  if(!result || result === 'cors') {
+    cell.innerHTML = `<span class="apt-na">—</span>`;
+    return;
+  }
+  cell.innerHTML = `<span class="apt-price">
+    <a href="${esc(result.url)}" target="_blank" style="text-decoration:none">
+      <span class="price-val">${result.price} ₼</span>
+    </a>
+    <span class="price-src">apt</span>
+  </span>`;
+}
+
+// Auto-fetch prices for visible rows
+function autoFetchPrices() {
+  const cells = document.querySelectorAll('[data-apt-name]');
+  let i = 0;
+  function next() {
+    if(i >= cells.length) return;
+    const el = cells[i++];
+    fetchAptPrice(el.dataset.aptName, el.id);
+    setTimeout(next, 120); // Throttle: 1 request per 120ms
+  }
+  next();
+}
+
+// ─────────────────────────────────────
+//  GROUPING LOGIC
+//  Group by: base trade name (first word) + INN
+// ─────────────────────────────────────
+function buildGroups(data) {
+  const map = new Map();
+  for(const d of data) {
+    // Key = first word of trade name (case-insensitive) to group e.g. "Augmentin 625mg" + "Augmentin 875mg" together
+    const baseName = d[0].trim().split(/\s+/)[0].toUpperCase();
+    const key = baseName;
+    if(!map.has(key)) {
+      map.set(key, {
+        baseName: d[0].trim().split(/\s+/)[0], // Original case
+        items: [],
+        catIdx: d[11],
+      });
+    }
+    map.get(key).items.push(d);
+  }
+  // Convert to array and sort
+  return Array.from(map.values());
+}
+
+// ─────────────────────────────────────
+//  DATA LOAD
+// ─────────────────────────────────────
 document.getElementById('filterCat').innerHTML='<option value="">Hamısı</option>'+CATS.map((c,i)=>`<option value="${i}">${c.i} ${c.n}</option>`).join('');
 
-// Load drugs from index.html (same origin)
 async function loadDrugsData(){
   try {
     document.getElementById('subTitle').textContent = 'Məlumatlar yüklənir...';
@@ -199,13 +382,29 @@ async function loadDrugsData(){
     if(!m) throw new Error('Məlumat tapılmadı');
     RAW = JSON.parse(m[1]);
     document.getElementById('subTitle').textContent = `${RAW.length.toLocaleString()} preparat reyestrdə`;
+    setView('grouped');
     onFilter();
   } catch(e) {
-    document.getElementById('drugsTb').innerHTML = `<tr><td colspan="11"><div class="empty" style="padding:40px"><div class="empty-icon">⚠️</div><div class="empty-text">Məlumat yüklənmədi: ${e.message}<br><small>index.html ilə eyni qovluqda olduğunuzu yoxlayın</small></div></div></td></tr>`;
+    document.getElementById('groupedTb').innerHTML = `<tr><td colspan="8"><div class="empty" style="padding:40px"><div class="empty-icon">⚠️</div><div class="empty-text">Məlumat yüklənmədi: ${e.message}<br><small>index.html ilə eyni qovluqda olduğunuzu yoxlayın</small></div></div></td></tr>`;
     document.getElementById('subTitle').textContent = 'Yükləmə xətası';
   }
 }
 
+// ─────────────────────────────────────
+//  VIEW TOGGLE
+// ─────────────────────────────────────
+function setView(mode) {
+  viewMode = mode;
+  document.getElementById('vt-grouped').classList.toggle('active', mode==='grouped');
+  document.getElementById('vt-flat').classList.toggle('active', mode==='flat');
+  document.getElementById('groupedTable').style.display = mode==='grouped' ? '' : 'none';
+  document.getElementById('flatTable').style.display = mode==='flat' ? '' : 'none';
+  onFilter();
+}
+
+// ─────────────────────────────────────
+//  FILTER & SORT
+// ─────────────────────────────────────
 function onFilter(){
   const q = document.getElementById('drugSearch').value.toLowerCase().trim();
   const cat = document.getElementById('filterCat').value;
@@ -222,30 +421,173 @@ function onFilter(){
     return true;
   });
 
-  filtered.sort((a,b)=>{
-    switch(sort){
-      case 'name_asc': return a[0].localeCompare(b[0],'az');
-      case 'name_desc': return b[0].localeCompare(a[0],'az');
-      case 'price_asc': return (parseFloat(a[9])||0)-(parseFloat(b[9])||0);
-      case 'price_desc': return (parseFloat(b[9])||0)-(parseFloat(a[9])||0);
-      default: return 0;
-    }
+  if(viewMode === 'grouped') {
+    groups = buildGroups(filtered);
+    // Sort groups
+    groups.sort((a,b)=>{
+      switch(sort){
+        case 'name_asc': return a.baseName.localeCompare(b.baseName,'az');
+        case 'name_desc': return b.baseName.localeCompare(a.baseName,'az');
+        case 'count_desc': return b.items.length - a.items.length;
+        case 'price_asc': {
+          const pa = Math.min(...a.items.map(x=>parseFloat(x[9])||Infinity));
+          const pb = Math.min(...b.items.map(x=>parseFloat(x[9])||Infinity));
+          return pa-pb;
+        }
+        case 'price_desc': {
+          const pa = Math.max(...a.items.map(x=>parseFloat(x[9])||0));
+          const pb = Math.max(...b.items.map(x=>parseFloat(x[9])||0));
+          return pb-pa;
+        }
+        default: return 0;
+      }
+    });
+    curPage=1;
+    renderGrouped();
+  } else {
+    filtered.sort((a,b)=>{
+      switch(sort){
+        case 'name_asc': return a[0].localeCompare(b[0],'az');
+        case 'name_desc': return b[0].localeCompare(a[0],'az');
+        case 'price_asc': return (parseFloat(a[9])||0)-(parseFloat(b[9])||0);
+        case 'price_desc': return (parseFloat(b[9])||0)-(parseFloat(a[9])||0);
+        default: return 0;
+      }
+    });
+    curPage=1;
+    renderFlat();
+  }
+}
+
+// ─────────────────────────────────────
+//  RENDER GROUPED VIEW
+// ─────────────────────────────────────
+function renderGrouped(){
+  const total = groups.length;
+  const totalItems = filtered.length;
+  const pages = Math.ceil(total/PER_PAGE);
+  if(curPage>pages&&pages>0) curPage=1;
+  const start=(curPage-1)*PER_PAGE;
+  const page = groups.slice(start, start+PER_PAGE);
+
+  document.getElementById('resultCount').textContent = `${total.toLocaleString()} qrup · ${totalItems.toLocaleString()} preparat`;
+  document.getElementById('tableTitle').textContent = `Qruplu görünüş — ${total.toLocaleString()} unikal dərman adı`;
+
+  if(!page.length){
+    document.getElementById('groupedTb').innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nəticə tapılmadı</div></div></td></tr>';
+    document.getElementById('drugPag').innerHTML='';
+    return;
+  }
+
+  let html = '';
+  page.forEach((g, i)=>{
+    const idx = start+i;
+    const cat = CATS[g.catIdx||16]||CATS[16];
+    const prices = g.items.map(x=>parseFloat(x[9])||0).filter(Boolean);
+    const minP = prices.length ? Math.min(...prices) : 0;
+    const maxP = prices.length ? Math.max(...prices) : 0;
+    const priceRange = prices.length
+      ? (minP===maxP ? `${minP.toFixed(2)} ₼` : `${minP.toFixed(2)} – ${maxP.toFixed(2)} ₼`)
+      : '—';
+    const forms = [...new Set(g.items.map(x=>x[3]).filter(Boolean))].slice(0,2);
+    const aptId = `apt-${idx}`;
+    // Count badge color
+    const cntColor = g.items.length>=5?'var(--red)':g.items.length>=3?'var(--gold)':'var(--accent)';
+
+    html += `<tr class="group-toggle-row" id="grow-${idx}" onclick="toggleGroup(${idx})">
+      <td style="color:var(--muted);font-size:.72rem;width:40px">${start+i+1}</td>
+      <td class="fw" style="max-width:220px">
+        <span class="expand-icon">▶</span>
+        ${esc(g.baseName)}
+        <span class="cnt-badge" style="background:${cntColor}" title="${g.items.length} variant">×${g.items.length}</span>
+      </td>
+      <td style="font-size:.74rem;color:var(--accent);font-style:italic;max-width:160px">${esc([...new Set(g.items.map(x=>x[1]).filter(Boolean))].slice(0,2).join(', '))||'—'}</td>
+      <td>${forms.map(f=>`<span style="font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:5px;background:var(--accent3);color:var(--accent);border:1px solid var(--accent4)">${fi(f)} ${esc(f.substring(0,12))}</span>`).join(' ')}</td>
+      <td><span style="font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:5px;border:1px solid ${cat.c}30;background:${cat.c}10;color:${cat.c}">${cat.i} ${esc(cat.n.substring(0,14))}</span></td>
+      <td style="font-weight:800;text-align:center">
+        <span style="background:${cntColor}15;color:${cntColor};border:1px solid ${cntColor}40;padding:2px 8px;border-radius:6px;font-size:.76rem;font-weight:800">${g.items.length}</span>
+      </td>
+      <td style="font-size:.78rem;font-weight:700;color:var(--green);white-space:nowrap">${priceRange}</td>
+      <td class="price-cell">
+        <span id="${aptId}" data-apt-name="${esc(g.baseName)}">
+          <button class="fetch-btn" onclick="event.stopPropagation();fetchAptPrice('${g.baseName.replace(/'/g,"\\'")}','${aptId}')">🔍 Qiymət al</button>
+        </span>
+      </td>
+    </tr>`;
+
+    // Hidden children rows
+    html += `<tr id="gchildren-${idx}" style="display:none"><td colspan="8" style="padding:0">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#f8f9fb">
+          <th style="padding:6px 12px 6px 40px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);text-align:left">Ticarət Adı</th>
+          <th style="padding:6px 12px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);text-align:left">INN</th>
+          <th style="padding:6px 12px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);text-align:left">Doza</th>
+          <th style="padding:6px 12px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);text-align:left">Ölkə</th>
+          <th style="padding:6px 12px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);text-align:left">Topdansatış</th>
+          <th style="padding:6px 12px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);text-align:left">Pərakəndə</th>
+        </tr></thead>
+        <tbody>
+          ${g.items.map(d=>{
+            const ret=parseFloat(d[9])||0, ws=parseFloat(d[8])||0;
+            const pc=ret<10?'var(--green)':ret<50?'var(--accent)':ret<200?'var(--gold)':'var(--red)';
+            return `<tr class="child-row" onclick="showDetailDirect('${d[0].replace(/'/g,"\\'")}','${(d[1]||'').replace(/'/g,"\\'")}','${(d[2]||'').replace(/'/g,"\\'")}','${(d[3]||'').replace(/'/g,"\\'")}','${(d[7]||'').replace(/'/g,"\\'")}',${d[11]||16},${ws},${ret},'${(d[10]||'').replace(/'/g,"\\'")}','${(d[4]||'').replace(/'/g,"\\'")}','${(d[5]||'').replace(/'/g,"\\'")}','${(d[6]||'').replace(/'/g,"\\'")}')">
+              <td style="padding:7px 12px 7px 40px;font-weight:600;font-size:.78rem">${esc(d[0])}</td>
+              <td style="font-size:.73rem;color:var(--accent);font-style:italic">${esc(d[1])||'—'}</td>
+              <td style="font-size:.73rem">${esc(d[2])||'—'}</td>
+              <td style="font-size:.73rem;color:var(--muted)">${esc(d[7])||'—'}</td>
+              <td style="font-size:.75rem;color:var(--muted)">${ws?ws.toFixed(2)+' ₼':'—'}</td>
+              <td style="font-weight:800;color:${pc};font-size:.8rem">${ret?ret.toFixed(2)+' ₼':'—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </td></tr>`;
   });
 
-  curPage=1;
-  renderTable();
+  document.getElementById('groupedTb').innerHTML = html;
+  renderPag(pages);
+
+  // Auto-fetch visible apt prices (throttled)
+  setTimeout(autoFetchPricesGrouped, 300);
 }
 
-function clearFilters(){
-  document.getElementById('drugSearch').value='';
-  document.getElementById('filterCat').value='';
-  document.getElementById('filterForm').value='';
-  document.getElementById('filterCountry').value='';
-  document.getElementById('drugSort').value='name_asc';
-  onFilter();
+function autoFetchPricesGrouped() {
+  const cells = document.querySelectorAll('#groupedTb [data-apt-name]');
+  let i = 0;
+  function next() {
+    if(i >= cells.length) return;
+    const el = cells[i++];
+    // Only fetch if still showing the button (not fetched yet)
+    if(el.querySelector('.fetch-btn')) {
+      fetchAptPrice(el.dataset.aptName, el.id);
+    }
+    setTimeout(next, 200);
+  }
+  // Start with a delay so page renders first
+  setTimeout(next, 500);
 }
 
-function renderTable(){
+// Toggle expand group
+const expandedGroups = new Set();
+function toggleGroup(idx) {
+  const children = document.getElementById(`gchildren-${idx}`);
+  const row = document.getElementById(`grow-${idx}`);
+  if(!children) return;
+  if(expandedGroups.has(idx)) {
+    expandedGroups.delete(idx);
+    children.style.display = 'none';
+    row.classList.remove('expanded');
+  } else {
+    expandedGroups.add(idx);
+    children.style.display = '';
+    row.classList.add('expanded');
+  }
+}
+
+// ─────────────────────────────────────
+//  RENDER FLAT VIEW
+// ─────────────────────────────────────
+function renderFlat(){
   const total=filtered.length, pages=Math.ceil(total/PER_PAGE);
   if(curPage>pages&&pages>0) curPage=1;
   const start=(curPage-1)*PER_PAGE, page=filtered.slice(start,start+PER_PAGE);
@@ -254,35 +596,106 @@ function renderTable(){
   document.getElementById('tableTitle').textContent = `${total===RAW.length?'Bütün dərmanlar':`${total.toLocaleString()} nəticə`}`;
 
   if(!page.length){
-    document.getElementById('drugsTb').innerHTML='<tr><td colspan="11"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nəticə tapılmadı</div></div></td></tr>';
+    document.getElementById('flatTb').innerHTML='<tr><td colspan="10"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Nəticə tapılmadı</div></div></td></tr>';
     document.getElementById('drugPag').innerHTML='';
     return;
   }
 
-  document.getElementById('drugsTb').innerHTML = page.map((d,i)=>{
+  document.getElementById('flatTb').innerHTML = page.map((d,i)=>{
     const idx=start+i;
     const ret=parseFloat(d[9])||0, ws=parseFloat(d[8])||0;
     const pc=ret<10?'var(--green)':ret<50?'var(--accent)':ret<200?'var(--gold)':'var(--red)';
     const cat=CATS[d[11]||16]||CATS[16];
-    const maker=d[6].length>30?d[6].substring(0,30)+'…':d[6];
+    const maker=d[6].length>28?d[6].substring(0,28)+'…':d[6];
+    const aptId=`apt-f-${idx}`;
+    const baseName = d[0].trim().split(/\s+/)[0];
     return`<tr style="cursor:pointer" onclick="showDetail(${idx})">
       <td style="color:var(--muted);font-size:.72rem">${start+i+1}</td>
       <td class="fw" style="max-width:200px">${esc(d[0])}</td>
-      <td style="font-size:.74rem;color:var(--muted);font-style:italic;max-width:160px">${esc(d[1])||'—'}</td>
+      <td style="font-size:.74rem;color:var(--muted);font-style:italic;max-width:150px">${esc(d[1])||'—'}</td>
       <td style="font-size:.75rem;white-space:nowrap">${esc(d[2])||'—'}</td>
-      <td><span style="display:inline-block;font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--accent3);color:var(--accent);border:1px solid var(--accent4);white-space:nowrap">${fi(d[3])} ${esc(d[3])}</span></td>
-      <td style="font-size:.73rem;color:var(--muted);white-space:nowrap">${esc(d[4])} №${esc(d[5])}</td>
-      <td><span style="display:inline-block;font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:5px;border:1px solid ${cat.c}30;background:${cat.c}10;color:${cat.c};white-space:nowrap">${cat.i} ${esc(cat.n.length>12?cat.n.substring(0,11)+'…':cat.n)}</span></td>
+      <td><span style="display:inline-block;font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--accent3);color:var(--accent);border:1px solid var(--accent4);white-space:nowrap">${fi(d[3])} ${esc(d[3]||'').substring(0,12)}</span></td>
+      <td><span style="font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:5px;border:1px solid ${cat.c}30;background:${cat.c}10;color:${cat.c};white-space:nowrap">${cat.i} ${esc(cat.n.length>12?cat.n.substring(0,11)+'…':cat.n)}</span></td>
       <td style="font-size:.74rem"><span style="font-weight:700">${esc(d[7])}</span><br><span style="color:var(--muted);font-size:.68rem">${maker}</span></td>
       <td style="font-size:.78rem;color:var(--muted);white-space:nowrap">${ws?ws.toFixed(2)+' ₼':'—'}</td>
       <td style="font-weight:800;color:${pc};white-space:nowrap">${ret?ret.toFixed(2)+' ₼':'—'}</td>
-      <td style="font-size:.71rem;color:var(--muted);white-space:nowrap">${esc(d[10])||'—'}</td>
+      <td class="price-cell" onclick="event.stopPropagation()">
+        <span id="${aptId}" data-apt-name="${esc(baseName)}">
+          <button class="fetch-btn" onclick="fetchAptPrice('${baseName.replace(/'/g,"\\'")}','${aptId}')">🔍</button>
+        </span>
+      </td>
     </tr>`;
   }).join('');
 
   renderPag(pages);
 }
 
+// ─────────────────────────────────────
+//  DETAIL MODAL
+// ─────────────────────────────────────
+function showDetail(idx){
+  const d=filtered[idx]; if(!d) return;
+  showDetailDirect(d[0],d[1],d[2],d[3],d[7],d[11]||16,parseFloat(d[8])||0,parseFloat(d[9])||0,d[10],d[4],d[5],d[6]);
+}
+
+function showDetailDirect(name,inn,dose,form,country,catIdx,ws,ret,date,pack,reg,maker){
+  const cat=CATS[catIdx]||CATS[16];
+  const pc=ret<10?'var(--green)':ret<50?'var(--accent)':ret<200?'var(--gold)':'var(--red)';
+  document.getElementById('dModalTitle').textContent=name;
+  document.getElementById('dModalBody').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Ticarət adı</div><div style="font-weight:700;font-size:.88rem">${esc(name)}</div></div>
+      <div style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">INN</div><div style="font-size:.85rem;color:var(--accent);font-style:italic">${esc(inn)||'—'}</div></div>
+      <div style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Doza</div><div style="font-size:.85rem;font-weight:600">${esc(dose)||'—'}</div></div>
+      <div style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Forma</div><div style="font-size:.85rem;font-weight:600">${fi(form)} ${esc(form)||'—'}</div></div>
+      <div style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Qablaşdırma</div><div style="font-size:.85rem;font-weight:600">${esc(pack)} — №${esc(reg)}</div></div>
+      <div style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Kateqoriya</div><div style="font-size:.85rem;font-weight:700;color:${cat.c}">${cat.i} ${esc(cat.n)}</div></div>
+      <div style="grid-column:1/-1;background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">İstehsalçı</div><div style="font-size:.84rem;font-weight:600">${esc(maker)} <span style="color:var(--muted);font-weight:500">(${esc(country)})</span></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-top:10px">
+      <div style="background:var(--accent3);border:1.5px solid var(--accent4);border-radius:9px;padding:13px;text-align:center">
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:4px">Topdansatış</div>
+        <div style="font-size:1.2rem;font-weight:800;color:var(--muted)">${ws?ws.toFixed(2)+' ₼':'—'}</div>
+      </div>
+      <div style="background:var(--green2);border:1.5px solid var(--green3);border-radius:9px;padding:13px;text-align:center">
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:4px">Pərakəndə</div>
+        <div style="font-size:1.3rem;font-weight:900;color:${pc}">${ret?ret.toFixed(2)+' ₼':'—'}</div>
+      </div>
+      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:13px;text-align:center;cursor:pointer" onclick="openAptSearch('${esc(name.split(' ')[0])}')">
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">aptekonline.az</div>
+        <div id="modal-apt-price" style="font-size:.9rem;font-weight:700">
+          <span class="apt-loading"><span class="spin spin-dark" style="width:10px;height:10px;border-width:1.5px"></span></span>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:13px;text-align:center">
+        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Qüvvəyə minmə</div>
+        <div style="font-size:.82rem;font-weight:700;color:var(--ink2)">${esc(date)||'—'}</div>
+      </div>
+    </div>`;
+
+  // Fetch apt price for modal
+  const baseName = name.trim().split(/\s+/)[0];
+  const cacheKey = baseName.toLowerCase().trim();
+  if(aptCache[cacheKey] && aptCache[cacheKey] !== 'cors') {
+    const r = aptCache[cacheKey];
+    document.getElementById('modal-apt-price').innerHTML = `<a href="${esc(r.url)}" target="_blank" style="color:var(--green);font-weight:800;text-decoration:none">${r.price} ₼</a>`;
+  } else {
+    fetchAptPrice(baseName, 'modal-apt-price');
+  }
+
+  document.getElementById('drugModal').classList.add('open');
+}
+
+function openAptSearch(name) {
+  window.open(`https://aptekonline.az/search?q=${encodeURIComponent(name)}`, '_blank');
+}
+
+function closeModal(){document.getElementById('drugModal').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+// ─────────────────────────────────────
+//  PAGINATION
+// ─────────────────────────────────────
 function renderPag(pages){
   const pag=document.getElementById('drugPag');
   if(pages<=1){pag.innerHTML='';return;}
@@ -295,42 +708,11 @@ function renderPag(pages){
   b+=`<span class="page-info" style="margin-left:8px">${curPage} / ${pages}</span>`;
   pag.innerHTML=b;
 }
-function goPage(p){curPage=p;renderTable();document.querySelector('.table-wrap').scrollIntoView({behavior:'smooth',block:'start'});}
+function goPage(p){curPage=p;expandedGroups.clear();if(viewMode==='grouped')renderGrouped();else renderFlat();document.querySelector('.table-wrap').scrollIntoView({behavior:'smooth',block:'start'});}
 
-function showDetail(idx){
-  const d=filtered[idx]; if(!d) return;
-  const cat=CATS[d[11]||16]||CATS[16];
-  const ret=parseFloat(d[9])||0, ws=parseFloat(d[8])||0;
-  document.getElementById('dModalTitle').textContent=d[0];
-  document.getElementById('dModalBody').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Ticarət adı</div><div style="font-weight:700;font-size:.88rem">${esc(d[0])}</div></div>
-      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">INN (Beynəlxalq ad)</div><div style="font-size:.85rem;color:var(--accent);font-style:italic">${esc(d[1])||'—'}</div></div>
-      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Doza</div><div style="font-size:.85rem;font-weight:600">${esc(d[2])||'—'}</div></div>
-      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Farmasevtik forma</div><div style="font-size:.85rem;font-weight:600">${fi(d[3])} ${esc(d[3])||'—'}</div></div>
-      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Qablaşdırma</div><div style="font-size:.85rem;font-weight:600">${esc(d[4])} — №${esc(d[5])}</div></div>
-      <div class="di-item" style="background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Kateqoriya</div><div style="font-size:.85rem;font-weight:700;color:${cat.c}">${cat.i} ${esc(cat.n)}</div></div>
-      <div style="grid-column:1/-1;background:var(--bg);border-radius:9px;padding:11px 13px;border:1px solid var(--border)"><div class="di-label" style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">İstehsalçı</div><div style="font-size:.84rem;font-weight:600">${esc(d[6])} <span style="color:var(--muted);font-weight:500">(${esc(d[7])})</span></div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
-      <div style="background:var(--accent3);border:1.5px solid var(--accent4);border-radius:9px;padding:13px;text-align:center">
-        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:4px">Topdansatış</div>
-        <div style="font-size:1.2rem;font-weight:800;color:var(--muted)">${ws?ws.toFixed(2)+' ₼':'—'}</div>
-      </div>
-      <div style="background:var(--green2);border:1.5px solid var(--green3);border-radius:9px;padding:13px;text-align:center">
-        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:4px">Pərakəndə (ƏDV ilə)</div>
-        <div style="font-size:1.3rem;font-weight:900;color:var(--green)">${ret?ret.toFixed(2)+' ₼':'—'}</div>
-      </div>
-      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:13px;text-align:center">
-        <div style="font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px">Qüvvəyə minmə</div>
-        <div style="font-size:.88rem;font-weight:700;color:var(--ink2)">${esc(d[10])||'—'}</div>
-      </div>
-    </div>`;
-  document.getElementById('drugModal').classList.add('open');
-}
-function closeModal(){document.getElementById('drugModal').classList.remove('open');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
-
+// ─────────────────────────────────────
+//  EXPORT CSV
+// ─────────────────────────────────────
 function exportCSV(){
   if(!filtered.length){toast('Export üçün məlumat yoxdur','err');return;}
   const headers=['Ticarət Adı','INN','Doza','Forma','Qablaşdırma','Say','İstehsalçı','Ölkə','Topdansatış','Pərakəndə','Tarix','Kateqoriya'];
@@ -345,9 +727,16 @@ function exportCSV(){
   logActivity('CSV Export edildi', `${filtered.length} dərman`);
 }
 
-requireAdmin((u,d)=>{
-  loadDrugsData();
-});
+function clearFilters(){
+  document.getElementById('drugSearch').value='';
+  document.getElementById('filterCat').value='';
+  document.getElementById('filterForm').value='';
+  document.getElementById('filterCountry').value='';
+  document.getElementById('drugSort').value='name_asc';
+  onFilter();
+}
+
+requireAdmin((u,d)=>{ loadDrugsData(); });
 </script>
 </body>
 </html>
