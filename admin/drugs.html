@@ -250,84 +250,110 @@ const aptCache={}; // drugName -> { price, url } or null
 //  APTEKONLINE.AZ PRICE FETCH
 //  Uses their public search API endpoint
 // ─────────────────────────────────────
+// ─────────────────────────────────────
+//  CORS PROXY LIST — sırayla yoxlanır
+// ─────────────────────────────────────
+const PROXIES = [
+  url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+
+async function proxyFetch(targetUrl) {
+  for(const proxy of PROXIES) {
+    try {
+      const r = await fetch(proxy(targetUrl), { signal: AbortSignal.timeout(6000) });
+      if(!r.ok) continue;
+      const data = await r.json().catch(() => null);
+      // allorigins wraps in { contents: "..." }
+      if(data && data.contents) return data.contents;
+      // codetabs returns raw text as json string
+      if(typeof data === 'string') return data;
+      // corsproxy returns raw text
+      const text = await r.text().catch(() => null);
+      if(text) return text;
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
 async function fetchAptPrice(drugName, cellId) {
   const cell = document.getElementById(cellId);
   if(!cell) return;
 
-  // Check cache
   const cacheKey = drugName.toLowerCase().trim();
   if(aptCache[cacheKey] !== undefined) {
     renderAptPrice(cell, aptCache[cacheKey]);
     return;
   }
 
-  cell.innerHTML = `<span class="apt-loading"><span class="spin spin-dark" style="width:10px;height:10px;border-width:1.5px"></span> yüklənir</span>`;
+  cell.innerHTML = `<span class="apt-loading"><span class="spin spin-dark" style="width:10px;height:10px;border-width:1.5px"></span></span>`;
+
+  const query = encodeURIComponent(drugName.trim());
+  const targetUrl = `https://aptekonline.az/products?keywords=${query}`;
 
   try {
-    // aptekonline.az uses Angular + REST API
-    // Their search endpoint (discovered from network traffic)
-    const query = encodeURIComponent(drugName.split(' ')[0]); // First word for better results
-    const url = `https://aptekonline.az/api/products?search=${query}&limit=5`;
+    const html = await proxyFetch(targetUrl);
 
-    const r = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      mode: 'cors'
+    if(!html) throw new Error('proxy failed');
+
+    // Parse prices from the HTML
+    // aptekonline.az shows prices like: 12.50 ₼  or  data-price="12.50"
+    const prices = [];
+
+    // Method 1: JSON-LD or data attributes
+    const jsonMatches = html.match(/"price"\s*:\s*"?([\d.]+)"?/g) || [];
+    jsonMatches.forEach(m => {
+      const v = parseFloat(m.match(/([\d.]+)/)?.[1]);
+      if(v > 0.1 && v < 10000) prices.push(v);
     });
 
-    if(r.ok) {
-      const data = await r.json();
-      const products = data.data || data.products || data.items || data || [];
-      if(Array.isArray(products) && products.length > 0) {
-        // Find best match
-        const match = products.find(p => {
-          const pName = (p.name || p.title || p.product_name || '').toLowerCase();
-          return pName.includes(drugName.toLowerCase().split(' ')[0].toLowerCase());
-        }) || products[0];
+    // Method 2: visible price patterns like 12.50 ₼
+    const visibleMatches = html.match(/([\d]+\.[\d]{1,2})\s*(?:₼|AZN|manat)/gi) || [];
+    visibleMatches.forEach(m => {
+      const v = parseFloat(m);
+      if(v > 0.1 && v < 10000) prices.push(v);
+    });
 
-        const price = match.price || match.retail_price || match.cost || null;
-        const result = price ? { price: parseFloat(price).toFixed(2), url: `https://aptekonline.az/product/${match.id||match.slug||''}` } : null;
-        aptCache[cacheKey] = result;
-        renderAptPrice(cell, result);
-        return;
-      }
+    // Method 3: price class spans
+    const spanMatches = html.match(/class="[^"]*price[^"]*"[^>]*>([\d.,\s]+)</gi) || [];
+    spanMatches.forEach(m => {
+      const v = parseFloat(m.replace(/[^\d.]/g, ''));
+      if(v > 0.1 && v < 10000) prices.push(v);
+    });
+
+    if(prices.length > 0) {
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      const result = {
+        price: prices.length > 1 ? `${minPrice.toFixed(2)}–${maxPrice.toFixed(2)}` : minPrice.toFixed(2),
+        url: targetUrl,
+        count: prices.length
+      };
+      aptCache[cacheKey] = result;
+      renderAptPrice(cell, result);
+    } else {
+      // HTML loaded but no price found — drug may not be on site
+      aptCache[cacheKey] = null;
+      renderAptPrice(cell, null);
     }
-
-    // Fallback: try scraping search page
-    const searchUrl = `https://aptekonline.az/search?q=${query}`;
-    const r2 = await fetch(searchUrl, { mode: 'cors' });
-    if(r2.ok) {
-      const html = await r2.text();
-      // Parse price from Angular template data
-      const m = html.match(/price["\s:]+(\d+\.?\d*)/i);
-      if(m) {
-        const result = { price: parseFloat(m[1]).toFixed(2), url: searchUrl };
-        aptCache[cacheKey] = result;
-        renderAptPrice(cell, result);
-        return;
-      }
-    }
-
-    aptCache[cacheKey] = null;
-    renderAptPrice(cell, null);
   } catch(e) {
-    // CORS blocked - show manual link instead
-    aptCache[cacheKey] = 'cors';
-    cell.innerHTML = `<a href="https://aptekonline.az/search?q=${encodeURIComponent(drugName.split(' ')[0])}" target="_blank" class="fetch-btn">🔍 Axtar</a>`;
+    aptCache[cacheKey] = 'err';
+    cell.innerHTML = `<a href="${targetUrl}" target="_blank" class="fetch-btn">🔍 Axtar</a>`;
   }
 }
 
 function renderAptPrice(cell, result) {
-  if(!result || result === 'cors') {
+  if(!result || result === 'err') {
     cell.innerHTML = `<span class="apt-na">—</span>`;
     return;
   }
+  const countBadge = result.count > 1 ? `<span style="font-size:.6rem;color:var(--muted)">(${result.count})</span>` : '';
   cell.innerHTML = `<span class="apt-price">
     <a href="${esc(result.url)}" target="_blank" style="text-decoration:none">
       <span class="price-val">${result.price} ₼</span>
     </a>
+    ${countBadge}
     <span class="price-src">apt</span>
   </span>`;
 }
