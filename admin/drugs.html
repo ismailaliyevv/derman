@@ -247,117 +247,88 @@ let viewMode='grouped'; // 'grouped' | 'flat'
 const aptCache={}; // drugName -> { price, url } or null
 
 // ─────────────────────────────────────
-//  APTEKONLINE.AZ QİYMƏT FETCH
-//  Məntiq:
-//  1) /products?keywords=DƏRMAN → HTML-dən $scope.products JSON-unu çək → url_id tap
-//  2) /product/URL_ID → HTML-dən $scope.product JSON-unu çək → price/discount_price götür
+//  APTEKONLINE.AZ QİYMƏT
+//  aptekonline.az Cloudflare ilə qorunur — xarici proxy işləmir.
+//  Həll: Firestore-da saxlanan əl qiyməti + sayta birbaşa link
 // ─────────────────────────────────────
 
-async function proxyFetch(targetUrl) {
-  // allorigins.win: pulsuz CORS proxy, cavab { contents: "html..." } formatında gəlir
+// Firestore-dan bütün əl qiymətlərini yüklə
+const manualPrices = {}; // drugName(lower) -> { price, url, savedAt }
+
+async function loadManualPrices() {
   try {
-    const r = await fetch(
-      `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if(r.ok) {
-      const data = await r.json();
-      if(data && data.contents) return data.contents;
-    }
+    const snap = await db.collection('apt_prices').get();
+    snap.docs.forEach(d => { manualPrices[d.id] = d.data(); });
   } catch(e) {}
-  // Yedək: corsproxy.io
-  try {
-    const r = await fetch(
-      `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
-      { signal: AbortSignal.timeout(8000) }
-    );
-    if(r.ok) return await r.text();
-  } catch(e) {}
-  return null;
 }
 
-async function fetchAptPrice(drugName, cellId) {
+async function saveManualPrice(drugName, price) {
+  const key = drugName.toLowerCase().trim();
+  const data = {
+    drugName,
+    price: parseFloat(price),
+    url: `https://aptekonline.az/products?keywords=${encodeURIComponent(drugName)}`,
+    savedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+  await db.collection('apt_prices').doc(key).set(data);
+  manualPrices[key] = data;
+}
+
+function renderAptCell(drugName, cellId) {
   const cell = document.getElementById(cellId);
   if(!cell) return;
-
-  const cacheKey = drugName.toLowerCase().trim();
-  if(aptCache[cacheKey] !== undefined) {
-    renderAptPrice(cell, aptCache[cacheKey]);
-    return;
-  }
-
-  cell.innerHTML = `<span class="apt-loading"><span class="spin spin-dark" style="width:10px;height:10px;border-width:1.5px"></span></span>`;
-
+  const key = drugName.toLowerCase().trim();
+  const saved = manualPrices[key];
   const searchUrl = `https://aptekonline.az/products?keywords=${encodeURIComponent(drugName)}`;
 
-  try {
-    // ADDIM 1: Axtarış səhifəsini çək
-    const searchHtml = await proxyFetch(searchUrl);
-    if(!searchHtml) throw new Error('proxy failed');
-
-    // Axtarış nəticəsindən ilk məhsulun url_id-sini tap
-    // Angular kodu içindəki: "url_id":"AUGMENTIN--875MQ--N14-..."
-    const urlIdMatch = searchHtml.match(/"url_id"\s*:\s*"([^"]+)"/);
-    if(!urlIdMatch) {
-      aptCache[cacheKey] = null;
-      renderAptPrice(cell, null);
-      return;
-    }
-    const urlId = urlIdMatch[1];
-    const productUrl = `https://aptekonline.az/product/${urlId}`;
-
-    // ADDIM 2: Məhsul səhifəsini çək
-    const productHtml = await proxyFetch(productUrl);
-    if(!productHtml) throw new Error('no product html');
-
-    // $scope.product = {...} JSON-undan price oxu
-    // Nümunə: $scope.product = {"id":104358,...,"price":7.6,...}
-    const scopeMatch = productHtml.match(/\$scope\.product\s*=\s*(\{[\s\S]*?\});/);
-    if(scopeMatch) {
-      try {
-        const obj = JSON.parse(scopeMatch[1]);
-        const finalPrice = obj.discount_price ? parseFloat(obj.discount_price) : parseFloat(obj.price);
-        const origPrice  = obj.discount_price ? parseFloat(obj.price) : null;
-        if(finalPrice > 0) {
-          aptCache[cacheKey] = { price: finalPrice.toFixed(2), oldPrice: origPrice ? origPrice.toFixed(2) : null, url: productUrl };
-          renderAptPrice(cell, aptCache[cacheKey]);
-          return;
-        }
-      } catch(e) {}
-    }
-
-    // Fallback: sadə regex ilə "price":7.6
-    const dpMatch = productHtml.match(/"discount_price"\s*:\s*([\d.]+)/);
-    const pMatch  = productHtml.match(/"price"\s*:\s*([\d.]+)/);
-    const fp = dpMatch ? parseFloat(dpMatch[1]) : pMatch ? parseFloat(pMatch[1]) : 0;
-    if(fp > 0) {
-      aptCache[cacheKey] = { price: fp.toFixed(2), oldPrice: dpMatch && pMatch ? parseFloat(pMatch[1]).toFixed(2) : null, url: productUrl };
-      renderAptPrice(cell, aptCache[cacheKey]);
-    } else {
-      aptCache[cacheKey] = null;
-      renderAptPrice(cell, null);
-    }
-  } catch(e) {
-    aptCache[cacheKey] = 'err';
-    cell.innerHTML = `<a href="${searchUrl}" target="_blank" class="fetch-btn">🔍 Axtar</a>`;
+  if(saved && saved.price > 0) {
+    cell.innerHTML = `
+      <span class="apt-price" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+        <a href="${esc(searchUrl)}" target="_blank" style="text-decoration:none">
+          <span class="price-val">${parseFloat(saved.price).toFixed(2)} ₼</span>
+        </a>
+        <span class="price-src">apt</span>
+        <button onclick="event.stopPropagation();editAptPrice('${drugName.replace(/'/g,"\\'")}','${cellId}')"
+          style="background:none;border:none;cursor:pointer;font-size:.65rem;color:var(--muted);padding:0">✏️</button>
+      </span>`;
+  } else {
+    cell.innerHTML = `
+      <span style="display:flex;align-items:center;gap:4px">
+        <a href="${esc(searchUrl)}" target="_blank" class="fetch-btn" onclick="event.stopPropagation()">🔗 Bax</a>
+        <button onclick="event.stopPropagation();editAptPrice('${drugName.replace(/'/g,"\\'")}','${cellId}')"
+          style="background:var(--green2);border:1px solid var(--green3);color:var(--green);padding:2px 7px;border-radius:5px;font-size:.68rem;font-weight:700;cursor:pointer">+ Qiymət</button>
+      </span>`;
   }
 }
 
-function renderAptPrice(cell, result) {
-  if(!result || result === 'err') {
-    cell.innerHTML = `<span class="apt-na">—</span>`;
-    return;
-  }
-  const oldBadge = result.oldPrice
-    ? `<span style="font-size:.65rem;color:var(--muted);text-decoration:line-through">${result.oldPrice}</span>`
-    : '';
-  cell.innerHTML = `<span class="apt-price">
-    <a href="${esc(result.url)}" target="_blank" style="text-decoration:none">
-      <span class="price-val">${result.price} ₼</span>
-    </a>
-    ${oldBadge}
-    <span class="price-src">apt</span>
-  </span>`;
+function editAptPrice(drugName, cellId) {
+  const cell = document.getElementById(cellId);
+  if(!cell) return;
+  const key = drugName.toLowerCase().trim();
+  const current = manualPrices[key]?.price || '';
+  cell.innerHTML = `
+    <span style="display:flex;align-items:center;gap:4px" onclick="event.stopPropagation()">
+      <input id="aptInput-${cellId}" type="number" step="0.01" min="0" value="${current}"
+        placeholder="0.00"
+        style="width:70px;padding:3px 6px;border:1.5px solid var(--accent);border-radius:6px;font-size:.8rem;font-family:'Inter',sans-serif;outline:none"
+        onkeydown="if(event.key==='Enter')saveAptPrice('${drugName.replace(/'/g,"\\'")}','${cellId}')">
+      <button onclick="saveAptPrice('${drugName.replace(/'/g,"\\'")}','${cellId}')"
+        style="background:var(--accent);color:#fff;border:none;padding:3px 8px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer">✓</button>
+      <button onclick="renderAptCell('${drugName.replace(/'/g,"\\'")}','${cellId}')"
+        style="background:var(--surface);border:1px solid var(--border);padding:3px 6px;border-radius:6px;font-size:.72rem;cursor:pointer">✕</button>
+    </span>`;
+  setTimeout(() => document.getElementById(`aptInput-${cellId}`)?.focus(), 50);
+}
+
+async function saveAptPrice(drugName, cellId) {
+  const input = document.getElementById(`aptInput-${cellId}`);
+  const val = parseFloat(input?.value);
+  if(!val || val <= 0) { toast('Düzgün qiymət daxil edin','err'); return; }
+  try {
+    await saveManualPrice(drugName, val);
+    renderAptCell(drugName, cellId);
+    toast(`✅ ${drugName}: ${val.toFixed(2)} ₼ saxlanıldı`);
+  } catch(e) { toast('Xəta: '+e.message,'err'); }
 }
 
 // Auto-fetch prices for visible rows
@@ -367,7 +338,7 @@ function autoFetchPrices() {
   function next() {
     if(i >= cells.length) return;
     const el = cells[i++];
-    fetchAptPrice(el.dataset.aptName, el.id);
+    renderAptCell(el.dataset.aptName, el.id);
     setTimeout(next, 120); // Throttle: 1 request per 120ms
   }
   next();
@@ -538,7 +509,7 @@ function renderGrouped(){
       <td style="font-size:.78rem;font-weight:700;color:var(--green);white-space:nowrap">${priceRange}</td>
       <td class="price-cell">
         <span id="${aptId}" data-apt-name="${esc(g.baseName)}">
-          <button class="fetch-btn" onclick="event.stopPropagation();fetchAptPrice('${g.baseName.replace(/'/g,"\\'")}','${aptId}')">🔍 Qiymət al</button>
+          <button class="fetch-btn" onclick="event.stopPropagation();renderAptCell('${g.baseName.replace(/'/g,"\\'")}','${aptId}')"></button>
         </span>
       </td>
     </tr>`;
@@ -575,24 +546,12 @@ function renderGrouped(){
   document.getElementById('groupedTb').innerHTML = html;
   renderPag(pages);
 
-  // Auto-fetch visible apt prices (throttled)
-  setTimeout(autoFetchPricesGrouped, 300);
-}
-
-function autoFetchPricesGrouped() {
-  const cells = document.querySelectorAll('#groupedTb [data-apt-name]');
-  let i = 0;
-  function next() {
-    if(i >= cells.length) return;
-    const el = cells[i++];
-    // Only fetch if still showing the button (not fetched yet)
-    if(el.querySelector('.fetch-btn')) {
-      fetchAptPrice(el.dataset.aptName, el.id);
-    }
-    setTimeout(next, 200);
-  }
-  // Start with a delay so page renders first
-  setTimeout(next, 500);
+  // Bütün apt price cell-lərini render et
+  setTimeout(()=>{
+    document.querySelectorAll('#groupedTb [data-apt-name]').forEach(el => {
+      renderAptCell(el.dataset.aptName, el.id);
+    });
+  }, 100);
 }
 
 // Toggle expand group
@@ -649,7 +608,7 @@ function renderFlat(){
       <td style="font-weight:800;color:${pc};white-space:nowrap">${ret?ret.toFixed(2)+' ₼':'—'}</td>
       <td class="price-cell" onclick="event.stopPropagation()">
         <span id="${aptId}" data-apt-name="${esc(baseName)}">
-          <button class="fetch-btn" onclick="fetchAptPrice('${baseName.replace(/'/g,"\\'")}','${aptId}')">🔍</button>
+          <button class="fetch-btn" onclick="renderAptCell('${baseName.replace(/'/g,"\\'")}','${aptId}')">🔍</button>
         </span>
       </td>
     </tr>`;
@@ -708,7 +667,7 @@ function showDetailDirect(name,inn,dose,form,country,catIdx,ws,ret,date,pack,reg
     const r = aptCache[cacheKey];
     document.getElementById('modal-apt-price').innerHTML = `<a href="${esc(r.url)}" target="_blank" style="color:var(--green);font-weight:800;text-decoration:none">${r.price} ₼</a>`;
   } else {
-    fetchAptPrice(baseName, 'modal-apt-price');
+    renderAptCell(baseName, 'modal-apt-price');
   }
 
   document.getElementById('drugModal').classList.add('open');
@@ -764,7 +723,7 @@ function clearFilters(){
   onFilter();
 }
 
-requireAdmin((u,d)=>{ loadDrugsData(); });
+requireAdmin(async (u,d)=>{ await loadManualPrices(); loadDrugsData(); });
 </script>
 </body>
 </html>
