@@ -51,6 +51,18 @@
           <div class="toggle-row"><div><div class="toggle-lbl">Qiymət sütunu</div></div><label class="tgl"><input type="checkbox" id="s-price" checked><div class="tgl-sl"></div></label></div>
           <div class="toggle-row"><div><div class="toggle-lbl">Kateqoriya sütunu</div></div><label class="tgl"><input type="checkbox" id="s-cat" checked><div class="tgl-sl"></div></label></div>
           <div class="toggle-row"><div><div class="toggle-lbl">AI düyməsi</div><div class="toggle-sub">Hər sırada "💊 AI" düyməsi</div></div><label class="tgl"><input type="checkbox" id="s-ai" checked><div class="tgl-sl"></div></label></div>
+
+          <div style="margin-top:16px;margin-bottom:8px;font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--ink2)">📊 Cədvəl Sütunları (Görünüş)</div>
+          <div style="background:var(--accent3);border:1px solid var(--accent4);border-radius:9px;padding:10px 13px;margin-bottom:10px;font-size:.78rem;color:var(--accent)">
+            💡 Aşağıdakı sütunları saytda göstərib/gizlədə bilərsiniz
+          </div>
+          <div class="toggle-row"><div><div class="toggle-lbl">INN sütunu</div><div class="toggle-sub">Beynəlxalq generik ad</div></div><label class="tgl"><input type="checkbox" id="col-inn" checked><div class="tgl-sl"></div></label></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">Kateqoriya sütunu</div><div class="toggle-sub">Dərman kateqoriyası</div></div><label class="tgl"><input type="checkbox" id="col-cat" checked><div class="tgl-sl"></div></label></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">Forma sütunu</div><div class="toggle-sub">Farmasevtik forma (tablet, kapsul...)</div></div><label class="tgl"><input type="checkbox" id="col-form" checked><div class="tgl-sl"></div></label></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">Qablaşdırma sütunu</div><div class="toggle-sub">Qablaşdırma növü və nömrəsi</div></div><label class="tgl"><input type="checkbox" id="col-pack" checked><div class="tgl-sl"></div></label></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">Ölkə sütunu ↕</div><div class="toggle-sub">İstehsal ölkəsi və istehsalçı</div></div><label class="tgl"><input type="checkbox" id="col-country" checked><div class="tgl-sl"></div></label></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">Topdan ↕ sütunu</div><div class="toggle-sub">Topdansatış qiyməti</div></div><label class="tgl"><input type="checkbox" id="col-ws" checked><div class="tgl-sl"></div></label></div>
+          <div class="toggle-row"><div><div class="toggle-lbl">Pərakəndə ↕ sütunu</div><div class="toggle-sub">Pərakəndə satış qiyməti</div></div><label class="tgl"><input type="checkbox" id="col-ret" checked><div class="tgl-sl"></div></label></div>
         </div>
       </div>
 
@@ -96,10 +108,9 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // API Açarları - hamı oxuya bilər, yalnız adminlər yaza bilər
+    // API Açarları - yalnız adminlər
     match /api_keys/{doc} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
     // Parametrlər - yalnız adminlər yaza bilər, hamı oxuya
@@ -144,6 +155,7 @@ async function loadSettings(){
   try {
     const snap = await db.collection('settings').doc('site').get();
     const s = snap.exists ? snap.data() : {};
+    const cv = s.colVis || {};
     document.getElementById('s-perpage').value = s.perPage||50;
     document.getElementById('s-sort').value = s.sort||'name_asc';
     document.getElementById('s-price').checked = s.showPrice!==false;
@@ -157,6 +169,14 @@ async function loadSettings(){
     document.getElementById('s-warning-bar').checked = s.showWarning!==false;
     document.getElementById('s-warning-text').value = s.warningText||'⚕️ Bu məlumatlar yalnız tanışlıq məqsədi daşıyır.';
     document.getElementById('s-maintenance').checked = s.maintenance||false;
+    // Column visibility
+    document.getElementById('col-inn').checked = cv.inn!==false;
+    document.getElementById('col-cat').checked = cv.cat!==false;
+    document.getElementById('col-form').checked = cv.form!==false;
+    document.getElementById('col-pack').checked = cv.pack!==false;
+    document.getElementById('col-country').checked = cv.country!==false;
+    document.getElementById('col-ws').checked = cv.ws!==false;
+    document.getElementById('col-ret').checked = cv.ret!==false;
   } catch(e) {}
 }
 
@@ -176,6 +196,15 @@ async function saveAll(){
       showWarning: document.getElementById('s-warning-bar').checked,
       warningText: document.getElementById('s-warning-text').value,
       maintenance: document.getElementById('s-maintenance').checked,
+      colVis: {
+        inn: document.getElementById('col-inn').checked,
+        cat: document.getElementById('col-cat').checked,
+        form: document.getElementById('col-form').checked,
+        pack: document.getElementById('col-pack').checked,
+        country: document.getElementById('col-country').checked,
+        ws: document.getElementById('col-ws').checked,
+        ret: document.getElementById('col-ret').checked,
+      },
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     toast('✅ Parametrlər saxlanıldı');
