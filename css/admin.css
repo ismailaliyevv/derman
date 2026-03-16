@@ -162,9 +162,23 @@ textarea.fi{resize:vertical;min-height:80px;}
 .search-in{width:100%;padding:8px 11px 8px 30px;border:1.5px solid var(--border);border-radius:8px;font-family:'Inter',sans-serif;font-size:.83rem;color:var(--ink);background:var(--surface);outline:none;transition:all .2s;}
 .search-in:focus{border-color:var(--accent2);}
 
+/* ── HAMBURGER / MOBILE ── */
+.mob-hmb{display:none;position:fixed;top:12px;left:14px;z-index:200;background:var(--surface);border:1.5px solid var(--border);border-radius:9px;width:38px;height:38px;align-items:center;justify-content:center;flex-direction:column;gap:5px;cursor:pointer;padding:0;box-shadow:var(--shadow);}
+.mob-hmb span{display:block;width:18px;height:2px;background:var(--ink);border-radius:2px;transition:all .25s;}
+.mob-hmb.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.mob-hmb.open span:nth-child(2){opacity:0;}
+.mob-hmb.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(10,35,66,.4);backdrop-filter:blur(3px);z-index:90;}
+.mob-overlay.open{display:block;}
+
 /* RESPONSIVE */
 @media(max-width:768px){
-  .sidebar{transform:translateX(-100%);transition:transform .25s;}
-  .sidebar.open{transform:none;}
+  .mob-hmb{display:flex;}
+  .sidebar{transform:translateX(-100%);transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:100;}
+  .sidebar.mob-open{transform:none;box-shadow:4px 0 30px rgba(10,35,66,.18);}
   .main-wrap{margin-left:0;}
+  .topbar{padding:0 14px 0 60px;}
+  .content{padding:14px 14px 40px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .form-row{grid-template-columns:1fr;}
 }
