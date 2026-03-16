@@ -142,17 +142,43 @@ td.tws{color:var(--muted);font-size:.7rem;white-space:nowrap;}
 .ai-badge{display:inline-flex;align-items:center;gap:4px;font-size:.57rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:2px 7px;border-radius:999px;background:linear-gradient(90deg,#1455a4,#0f6b8a);color:#fff;margin-left:5px;}
 .spinner{width:26px;height:26px;border:2.5px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .7s linear infinite;margin:32px auto;}
 .empty-state{text-align:center;padding:44px 20px;color:var(--muted);}
-@media(max-width:900px){.layout{grid-template-columns:1fr;}.sidebar{position:static;}.hero-stats{display:none;}.cat-grid{grid-template-columns:repeat(auto-fill,minmax(115px,1fr));}}
+/* HAMBURGER / MOBILE SIDEBAR */
+.hmb-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;color:#fff;flex-direction:column;gap:5px;align-items:center;justify-content:center;}
+.hmb-btn span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .25s;}
+.hmb-btn.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.hmb-btn.open span:nth-child(2){opacity:0;transform:scaleX(0);}
+.hmb-btn.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mob-sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(10,35,66,.45);backdrop-filter:blur(3px);z-index:150;}
+.mob-sidebar-overlay.open{display:block;}
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr;}
+  .sidebar{
+    position:fixed;top:0;left:-260px;bottom:0;width:260px;background:var(--surface);
+    z-index:200;transition:left .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:4px 0 24px rgba(10,35,66,.18);padding-top:56px;overflow-y:auto;
+  }
+  .sidebar.mob-open{left:0;}
+  .hmb-btn{display:flex;}
+  .hero-stats{display:none;}
+  .cat-grid{grid-template-columns:repeat(auto-fill,minmax(115px,1fr));}
+  .toolbar{flex-direction:column;align-items:flex-start;gap:6px;}
+}
 </style>
 </head>
 <body>
 
 <header class="header">
-  <div class="hlogo"><div class="hlogo-dot"></div>AzDərman</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button class="hmb-btn" id="mobHmb" onclick="toggleMobSidebar()" aria-label="Menyu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="hlogo"><div class="hlogo-dot"></div>AzDərman</div>
+  </div>
   <div class="hnav">
     <a href="admin/login.html">⚙️ Admin</a>
   </div>
 </header>
+<div class="mob-sidebar-overlay" id="mobOverlay" onclick="closeMobSidebar()"></div>
 
 <div id="warnBar">⚕️ Bu məlumatlar yalnız tanışlıq məqsədi daşıyır. Hər hansı dərmanı həkimin tövsiyəsi olmadan qəbul etməyin.</div>
 
@@ -199,27 +225,30 @@ td.tws{color:var(--muted);font-size:.7rem;white-space:nowrap;}
   <main class="main">
     <div class="toolbar">
       <div class="result-info" id="resultInfo">Yüklənir...</div>
-      <select class="sort-select" id="sortSel" onchange="applySort()">
-        <option value="name_asc">Ad A→Z</option>
-        <option value="name_desc">Ad Z→A</option>
-        <option value="price_asc">Qiymət ↑</option>
-        <option value="price_desc">Qiymət ↓</option>
-        <option value="date_desc">Tarix: Yeni</option>
-        <option value="country_asc">Ölkə A→Z</option>
-      </select>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <button id="groupBtn" onclick="toggleGroup()" style="padding:5px 11px;border-radius:7px;border:1.5px solid var(--border);background:var(--surface);font-family:'Inter',sans-serif;font-size:.74rem;font-weight:600;color:var(--ink2);cursor:pointer;transition:all .15s;">📦 Qrupla</button>
+        <select class="sort-select" id="sortSel" onchange="applySort()">
+          <option value="name_asc">Ad A→Z</option>
+          <option value="name_desc">Ad Z→A</option>
+          <option value="price_asc">Qiymət ↑</option>
+          <option value="price_desc">Qiymət ↓</option>
+          <option value="date_desc">Tarix: Yeni</option>
+          <option value="country_asc">Ölkə A→Z</option>
+        </select>
+      </div>
     </div>
     <div class="table-wrap">
       <div class="table-scroll">
         <table>
           <thead><tr>
             <th onclick="sortBy('name')">Ticarət adı ↕</th>
-            <th>INN</th>
-            <th>Kateqoriya</th>
-            <th>Forma</th>
-            <th>Qablaşdırma</th>
-            <th onclick="sortBy('country')">Ölkə ↕</th>
-            <th onclick="sortBy('price_asc')">Topdan ↕</th>
-            <th onclick="sortBy('price_desc')">Pərakəndə ↕</th>
+            <th id="th-inn">INN</th>
+            <th id="th-cat">Kateqoriya</th>
+            <th id="th-form">Forma</th>
+            <th id="th-pack">Qablaşdırma</th>
+            <th id="th-country" onclick="sortBy('country')">Ölkə ↕</th>
+            <th id="th-ws" onclick="sortBy('price_asc')">Topdan ↕</th>
+            <th id="th-ret" onclick="sortBy('price_desc')">Pərakəndə ↕</th>
           </tr></thead>
           <tbody id="tableBody"><tr><td colspan="8"><div style="text-align:center;padding:40px"><div class="spinner"></div></div></td></tr></tbody>
         </table>
@@ -283,6 +312,8 @@ async function loadConfig(){
     if(siteCfg.showWarning===false)document.getElementById('warnBar').style.display='none';
     if(siteCfg.warningText)document.getElementById('warnBar').textContent=siteCfg.warningText;
     if(siteCfg.showCatGrid===false)document.getElementById('catGrid').parentElement.style.display='none';
+    // Load column visibility
+    if(siteCfg.colVis)colVis=Object.assign(colVis,siteCfg.colVis);
   }catch(e){console.error(e);}
 }
 
@@ -339,20 +370,29 @@ function renderTable(){
   const tb=document.getElementById('tableBody');
   const showAi=siteCfg.showAi!==false&&aiCfg.enabled!==false&&!!activeApiKey;
   if(!page.length){tb.innerHTML=`<tr><td colspan="8"><div class="empty-state">🔍 Nəticə tapılmadı</div></td></tr>`;document.getElementById('pagination').innerHTML='';return;}
-  tb.innerHTML=page.map((d,i)=>{
-    const idx=start+i,ret=parseFloat(d[9])||0,ws=parseFloat(d[8])||0;
+
+  // Apply column visibility to headers
+  const colMap={inn:'th-inn',cat:'th-cat',form:'th-form',pack:'th-pack',country:'th-country',ws:'th-ws',ret:'th-ret'};
+  Object.entries(colMap).forEach(([key,thId])=>{
+    const th=document.getElementById(thId);
+    if(th)th.style.display=colVis[key]!==false?'':'none';
+  });
+
+  function rowHtml(d,idx){
+    const ret=parseFloat(d[9])||0,ws=parseFloat(d[8])||0;
     const pc=ret<10?'#0f7b4d':ret<50?'#1455a4':ret<200?'#9a6700':'#c0392b';
     const cat=CATS[d[11]||16]||CATS[16];
     const ms=d[6].length>28?d[6].substring(0,28)+'…':d[6];
+    const cv=colVis;
     return`<tr onclick="toggleDetail(${idx})">
-      <td class="tname">${esc(d[0])}${showAi?`<span class="info-btn" onclick="event.stopPropagation();openDrugModal(${idx})">💊 AI</span>`:''}  </td>
-      <td class="tinn">${esc(d[1])}</td>
-      <td><span class="cbadge" style="background:${cat.bg};color:${cat.c};border-color:${cat.c}30">${cat.i} ${esc(cat.n.length>11?cat.n.substring(0,10)+'…':cat.n)}</span></td>
-      <td><span class="fbadge">${formIcon(d[3])} ${esc(d[3])}</span></td>
-      <td style="font-size:.71rem;color:var(--muted);white-space:nowrap">${esc(d[4])} №${esc(d[5])}</td>
-      <td style="font-size:.73rem" title="${esc(d[6])}">${esc(d[7])}<br><span style="font-size:.63rem;color:#bbb">${ms}</span></td>
-      <td class="tws">${ws?ws.toFixed(2)+' ₼':'—'}</td>
-      <td class="tprice" style="color:${pc}">${ret?ret.toFixed(2)+' ₼':'—'}</td>
+      <td class="tname">${esc(d[0])}${showAi?`<span class="info-btn" onclick="event.stopPropagation();openDrugModal(${idx})">💊 AI</span>`:''}</td>
+      ${cv.inn!==false?`<td class="tinn">${esc(d[1])}</td>`:''}
+      ${cv.cat!==false?`<td><span class="cbadge" style="background:${cat.bg};color:${cat.c};border-color:${cat.c}30">${cat.i} ${esc(cat.n.length>11?cat.n.substring(0,10)+'…':cat.n)}</span></td>`:''}
+      ${cv.form!==false?`<td><span class="fbadge">${formIcon(d[3])} ${esc(d[3])}</span></td>`:''}
+      ${cv.pack!==false?`<td style="font-size:.71rem;color:var(--muted);white-space:nowrap">${esc(d[4])} №${esc(d[5])}</td>`:''}
+      ${cv.country!==false?`<td style="font-size:.73rem" title="${esc(d[6])}">${esc(d[7])}<br><span style="font-size:.63rem;color:#bbb">${ms}</span></td>`:''}
+      ${cv.ws!==false?`<td class="tws">${ws?ws.toFixed(2)+' ₼':'—'}</td>`:''}
+      ${cv.ret!==false?`<td class="tprice" style="color:${pc}">${ret?ret.toFixed(2)+' ₼':'—'}</td>`:''}
     </tr>
     <tr class="detail-row" id="dr_${idx}">
       <td colspan="8" class="detail-cell">
@@ -371,7 +411,51 @@ function renderTable(){
         </div>
       </td>
     </tr>`;
-  }).join('');
+  }
+
+  if(groupMode){
+    // Group by drug name
+    const groups={};
+    page.forEach((d,i)=>{
+      const key=d[0].toLowerCase().trim();
+      if(!groups[key])groups[key]={name:d[0],rows:[]};
+      groups[key].rows.push({d,idx:start+i});
+    });
+    tb.innerHTML=Object.values(groups).map(g=>{
+      if(g.rows.length===1){return rowHtml(g.rows[0].d,g.rows[0].idx);}
+      const gid='grp_'+g.rows[0].idx;
+      const minP=Math.min(...g.rows.map(r=>parseFloat(r.d[9])||Infinity).filter(p=>p<Infinity));
+      const maxP=Math.max(...g.rows.map(r=>parseFloat(r.d[9])||0));
+      const priceStr=minP===maxP?(minP?minP.toFixed(2)+' ₼':'—'):`${minP.toFixed(2)}–${maxP.toFixed(2)} ₼`;
+      return`<tr style="background:linear-gradient(90deg,var(--accent3),var(--surface));cursor:pointer" onclick="toggleGroup_${gid}()" id="ghead_${gid}">
+        <td class="tname" colspan="2">
+          <span style="display:inline-flex;align-items:center;gap:6px">
+            <span style="font-size:.6rem;color:var(--accent);font-weight:900;transition:transform .2s" id="garr_${gid}">▶</span>
+            ${esc(g.name)}
+            <span style="font-size:.63rem;font-weight:700;background:var(--accent);color:#fff;padding:1px 7px;border-radius:999px">${g.rows.length} variant</span>
+          </span>
+        </td>
+        ${colVis.cat!==false?'<td></td>':''}
+        ${colVis.form!==false?'<td></td>':''}
+        ${colVis.pack!==false?'<td></td>':''}
+        ${colVis.country!==false?'<td style="font-size:.71rem;color:var(--muted)">${[...new Set(g.rows.map(r=>r.d[7]).filter(Boolean))].slice(0,3).join(', ')}</td>':''}
+        ${colVis.ws!==false?'<td></td>':''}
+        ${colVis.ret!==false?`<td class="tprice" style="color:var(--accent)">${priceStr}</td>`:''}
+      </tr>
+      <tbody id="gbody_${gid}" style="display:none">${g.rows.map(r=>rowHtml(r.d,r.idx)).join('')}</tbody>
+      <script>
+        window['toggleGroup_${gid}']=function(){
+          const b=document.getElementById('gbody_${gid}');
+          const a=document.getElementById('garr_${gid}');
+          const open=b.style.display==='';
+          b.style.display=open?'none':'';
+          a.style.transform=open?'':'rotate(90deg)';
+        };
+      <\/script>`;
+    }).join('');
+  } else {
+    tb.innerHTML=page.map((d,i)=>rowHtml(d,start+i)).join('');
+  }
   renderPagination(pages);
 }
 
@@ -488,6 +572,57 @@ function renderAiContent(info,d){
 }
 
 document.addEventListener('keydown',e=>{if(e.key==='/'&&document.activeElement.tagName!=='INPUT'){e.preventDefault();document.getElementById('searchIn')?.focus();}});
+
+// ── MOBILE SIDEBAR ────────────────────────────────
+function toggleMobSidebar(){
+  const sb=document.querySelector('.sidebar');
+  const ov=document.getElementById('mobOverlay');
+  const btn=document.getElementById('mobHmb');
+  const open=sb.classList.toggle('mob-open');
+  ov.classList.toggle('open',open);
+  btn.classList.toggle('open',open);
+  document.body.style.overflow=open?'hidden':'';
+}
+function closeMobSidebar(){
+  document.querySelector('.sidebar').classList.remove('mob-open');
+  document.getElementById('mobOverlay').classList.remove('open');
+  document.getElementById('mobHmb').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+// ── COLUMN VISIBILITY ─────────────────────────────
+// colVis: {inn,cat,form,pack,country,ws,ret} — loaded from siteCfg
+let colVis={inn:true,cat:true,form:true,pack:true,country:true,ws:true,ret:true};
+function applyColVis(){
+  // map col index to key
+  const map={1:'inn',2:'cat',3:'form',4:'pack',5:'country',6:'ws',7:'ret'};
+  const tbl=document.querySelector('table');
+  if(!tbl)return;
+  Object.entries(map).forEach(([ci,key])=>{
+    const show=colVis[key]!==false;
+    tbl.querySelectorAll(`tr > *:nth-child(${parseInt(ci)+1})`).forEach(el=>{el.style.display=show?'':'none';});
+  });
+}
+
+// ── DRUG NAME GROUPING ────────────────────────────
+let groupMode=false;
+function toggleGroup(){
+  groupMode=!groupMode;
+  const btn=document.getElementById('groupBtn');
+  if(btn){btn.classList.toggle('active',groupMode);btn.textContent=groupMode?'📦 Qruplanmış':'📦 Qrupla';}
+  renderTable();
+}
+
+function groupByName(page){
+  // Group consecutive same-name drugs
+  const groups={};
+  page.forEach((d,i)=>{
+    const key=d[0].toLowerCase().trim();
+    if(!groups[key])groups[key]={name:d[0],rows:[],first:i};
+    groups[key].rows.push({d,i});
+  });
+  return Object.values(groups);
+}
 
 // INIT
 (async()=>{
