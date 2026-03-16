@@ -291,6 +291,8 @@ function formIcon(f){for(const k in FORM_ICONS)if(f&&f.startsWith(k))return FORM
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 let filtered=[...RAW],curPage=1,PER_PAGE=50,sortKey='name_asc',searchQ='',activeForm=null,activeCountry=null,activeCat=null,expandedRow=null;
+let colVis={inn:true,cat:true,form:true,pack:true,country:true,ws:true,ret:true};
+let groupMode=false;
 // Site config from Firebase
 let siteCfg={}, aiCfg={}, activeApiKey=null, activeModel='anthropic/claude-haiku-4.5';
 const aiCache={};
@@ -589,39 +591,12 @@ function closeMobSidebar(){
   document.getElementById('mobHmb').classList.remove('open');
   document.body.style.overflow='';
 }
-
-// ── COLUMN VISIBILITY ─────────────────────────────
-// colVis: {inn,cat,form,pack,country,ws,ret} — loaded from siteCfg
-let colVis={inn:true,cat:true,form:true,pack:true,country:true,ws:true,ret:true};
-function applyColVis(){
-  // map col index to key
-  const map={1:'inn',2:'cat',3:'form',4:'pack',5:'country',6:'ws',7:'ret'};
-  const tbl=document.querySelector('table');
-  if(!tbl)return;
-  Object.entries(map).forEach(([ci,key])=>{
-    const show=colVis[key]!==false;
-    tbl.querySelectorAll(`tr > *:nth-child(${parseInt(ci)+1})`).forEach(el=>{el.style.display=show?'':'none';});
-  });
-}
-
 // ── DRUG NAME GROUPING ────────────────────────────
-let groupMode=false;
 function toggleGroup(){
   groupMode=!groupMode;
   const btn=document.getElementById('groupBtn');
   if(btn){btn.classList.toggle('active',groupMode);btn.textContent=groupMode?'📦 Qruplanmış':'📦 Qrupla';}
   renderTable();
-}
-
-function groupByName(page){
-  // Group consecutive same-name drugs
-  const groups={};
-  page.forEach((d,i)=>{
-    const key=d[0].toLowerCase().trim();
-    if(!groups[key])groups[key]={name:d[0],rows:[],first:i};
-    groups[key].rows.push({d,i});
-  });
-  return Object.values(groups);
 }
 
 // INIT
